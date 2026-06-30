@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<packet>
+  <chat thread="1" no="1" vpos="0" date="1600000000" mail="" user_id="1001" premium="0">最初のコメント</chat>
+  <chat thread="1" no="2" vpos="60" date="1600000001" mail="" user_id="1002" premium="0">こんにちは</chat>
+  <chat thread="1" no="3" vpos="150" date="1600000002" mail="" user_id="1003" premium="0">wwwwwww</chat>
+
+  <!-- 約10秒地点に「ｷﾀ」クラスタ -->
+  <chat thread="1" no="10" vpos="980" date="1600000010" mail="" user_id="2001" premium="0">ｷﾀ━━━━(ﾟ∀ﾟ)━━━━!!</chat>
+  <chat thread="1" no="11" vpos="1000" date="1600000010" mail="" user_id="2002" premium="0">ｷﾀ━━━!!</chat>
+  <chat thread="1" no="12" vpos="1010" date="1600000010" mail="red" user_id="2003" premium="0">キタ━━━━!!</chat>
+  <chat thread="1" no="13" vpos="1030" date="1600000010" mail="" user_id="2004" premium="0">きたあああ</chat>
+  <chat thread="1" no="14" vpos="1050" date="1600000010" mail="" user_id="2005" premium="0">ｷﾀ━━(ﾟ∀ﾟ)━━!!</chat>
+  <chat thread="1" no="15" vpos="1080" date="1600000011" mail="" user_id="2006" premium="0">はじまった</chat>
+
+  <chat thread="1" no="20" vpos="2000" date="1600000020" mail="" user_id="3001" premium="0">通常コメント</chat>
+
+  <!-- 約30秒地点に「A」(全角/半角) クラスタ -->
+  <chat thread="1" no="30" vpos="2980" date="1600000030" mail="" user_id="4001" premium="0">A</chat>
+  <chat thread="1" no="31" vpos="3000" date="1600000030" mail="" user_id="4002" premium="0">Ａ</chat>
+  <chat thread="1" no="32" vpos="3020" date="1600000030" mail="big" user_id="4003" premium="0">A</chat>
+
+  <chat thread="1" no="40" vpos="5000" date="1600000050" mail="" user_id="5001" premium="0">中盤のコメント</chat>
+
+  <!-- 約90秒地点に「B」クラスタ -->
+  <chat thread="1" no="50" vpos="8980" date="1600000090" mail="" user_id="6001" premium="0">B</chat>
+  <chat thread="1" no="51" vpos="9000" date="1600000090" mail="" user_id="6002" premium="0">Ｂ</chat>
+  <chat thread="1" no="52" vpos="9030" date="1600000090" mail="" user_id="6003" premium="0">B</chat>
+
+  <chat thread="1" no="60" vpos="11000" date="1600000110" mail="" user_id="7001" premium="0">最後のコメント</chat>
+</packet>

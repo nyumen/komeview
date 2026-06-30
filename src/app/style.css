@@ -1,0 +1,421 @@
+:root {
+  --bar-bg: rgba(20, 22, 28, 0.82);
+  --accent: #3b82f6;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --titlebar-h: 32px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  color: var(--text);
+  /* ウィンドウモードでは枠を表示（透明窓なのでCSSボーダーで / SPEC §2.1） */
+  border: 1px solid rgba(150, 160, 175, 0.9);
+  /* OSの丸角に枠線を沿わせ、子要素も丸角にクリップする（角でラインが欠ける問題対策） */
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* 擬似全画面では枠・角丸を消す（SPEC §2.1, §2.3） */
+.app.fullscreen {
+  border: none;
+  border-radius: 0;
+}
+
+/* ─── タイトルバー ─── */
+.titlebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bar-bg);
+  -webkit-app-region: drag;
+  z-index: 30;
+  font-size: 12px;
+  padding-left: 10px;
+}
+
+.titlebar .title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #cbd5e1;
+}
+
+.window-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+  height: 100%;
+}
+
+.win-btn {
+  width: 44px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.win-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.win-btn.close:hover {
+  background: #e11d48;
+  color: white;
+}
+
+/* ─── コメント描画 ─── */
+/* ウィンドウモードではタイトルバーの高さ分下げる（SPEC §2.1） */
+.overlay-canvas {
+  position: absolute;
+  left: 0;
+  top: var(--titlebar-h);
+  width: 100%;
+  height: calc(100% - var(--titlebar-h));
+  pointer-events: none;
+  background: transparent;
+}
+
+/* 擬似全画面ではタイトルバーが無いので全面に描画 */
+.app.fullscreen .overlay-canvas {
+  top: 0;
+  height: 100%;
+}
+
+/* ─── 空状態の案内 ─── */
+.empty-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 28px 36px;
+  border: 2px dashed #4b5563;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.7);
+  color: var(--muted);
+  z-index: 20;
+}
+
+.empty-hint.dragging {
+  border-color: var(--accent);
+  background: rgba(30, 41, 59, 0.85);
+}
+
+.empty-hint p {
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+
+.empty-hint button {
+  padding: 8px 22px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.empty-hint button:hover {
+  background: #2563eb;
+}
+
+/* ─── 下部バー ─── */
+.bottom-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bar-bg);
+  padding: 6px 12px 10px;
+  z-index: 30;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.bottom-bar.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ─── シークバー ─── */
+.seekbar {
+  position: relative;
+  height: 34px;
+  margin-bottom: 6px;
+}
+
+.seekbar-wave {
+  position: absolute;
+  inset: 0 0 8px 0;
+  width: 100%;
+  height: calc(100% - 8px);
+  pointer-events: none;
+}
+
+.seekbar-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.seekbar-played {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+.seekbar-playhead {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.seekbar-marker {
+  position: absolute;
+  bottom: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.seekbar-marker-label {
+  position: absolute;
+  /* シークバーの下側に表示（ホバー時刻ツールチップは上側なので重ならない） */
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 1px 5px;
+  border-radius: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+  z-index: 5;
+}
+
+.seekbar-marker:hover .seekbar-marker-label {
+  opacity: 1;
+}
+
+.seekbar-tooltip {
+  position: absolute;
+  bottom: 16px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.88);
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.seekbar-tooltip-sub {
+  color: #67e8f9;
+  font-size: 10px;
+}
+
+/* ─── 操作 ─── */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.controls-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ctrl-btn {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.speed-indicator {
+  font-weight: 700;
+  min-width: 42px;
+}
+
+.time-display {
+  font-family: monospace;
+  font-size: 13px;
+  color: #e5e7eb;
+  margin-left: 6px;
+}
+
+.jump-btn {
+  margin-left: 10px;
+  font-weight: 600;
+}
+
+.jump-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.next-marker {
+  font-size: 12px;
+  color: #fcd34d;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* ─── メニュー ─── */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.menu {
+  position: absolute;
+  min-width: 160px;
+  background: #f8fafc;
+  color: #1f2937;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+  padding: 4px 0;
+  font-size: 13px;
+  user-select: none;
+}
+
+.menu-header {
+  padding: 6px 14px;
+  color: #475569;
+  font-weight: 600;
+  cursor: default;
+}
+
+.menu-item {
+  position: relative;
+  padding: 6px 14px 6px 26px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background: #e2e8f0;
+}
+
+.menu-item.danger:hover {
+  background: #fecaca;
+}
+
+.menu-check {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  color: var(--accent);
+}
+
+.menu-sep {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
+.sub-arrow {
+  position: absolute;
+  right: 10px;
+  color: #94a3b8;
+}
+
+.has-sub > .submenu {
+  display: none;
+  position: absolute;
+  top: -5px;
+  left: 100%;
+  min-width: 120px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+  padding: 4px 0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.has-sub:hover > .submenu {
+  display: block;
+}
