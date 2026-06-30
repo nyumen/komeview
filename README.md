@@ -18,7 +18,7 @@
 
 ## インストール（ビルド済みを使う）
 
-[Releases](../../releases) から各OS向けのファイルをダウンロードしてください。
+[Releases](https://github.com/nyumen/komeview/releases) から各OS向けのファイルをダウンロードしてください。
 
 ### Windows
 - `komeview x.y.z.exe`（ポータブル版）をダウンロードしてダブルクリックで起動。インストール不要です。
