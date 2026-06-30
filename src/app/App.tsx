@@ -7,7 +7,7 @@ import {
 } from '../shared/markers'
 import { Overlay, type OverlayHandle } from './Overlay'
 import { BottomBar } from './BottomBar'
-import { SpeedMenu, ContextMenu } from './menus'
+import { SpeedMenu, ContextMenu, AboutDialog } from './menus'
 import { parseNicoXML, type FormattedComment } from './xml'
 import { computeDensity, type DensityResult } from './density'
 import { MARKER_LABELS, backgroundCss } from './constants'
@@ -45,6 +45,8 @@ export function App() {
   const [dragging, setDragging] = useState(false)
   const [speedMenu, setSpeedMenu] = useState<{ x: number; y: number } | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+  const [showAbout, setShowAbout] = useState(false)
+  const [appVersion, setAppVersion] = useState('')
 
   const overlayRef = useRef<OverlayHandle>(null)
 
@@ -351,6 +353,11 @@ export function App() {
     return unsub
   }, [loadXmlText])
 
+  // アプリのバージョンを取得（バージョン情報ダイアログ用）
+  useEffect(() => {
+    window.api.getVersion().then(setAppVersion)
+  }, [])
+
   // 起動時に設定を読み込み
   useEffect(() => {
     window.api.getSettings().then((s) => {
@@ -494,9 +501,14 @@ export function App() {
           onToggleControlBar={toggleControlBar}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
           onToggleClickThrough={toggleClickThrough}
+          onShowAbout={() => setShowAbout(true)}
           onCloseApp={() => window.api.close()}
           onClose={() => setCtxMenu(null)}
         />
+      )}
+
+      {showAbout && (
+        <AboutDialog version={appVersion} onClose={() => setShowAbout(false)} />
       )}
     </div>
   )

@@ -40,10 +40,12 @@
     "mac": {
       "target": ["dmg"],
       "category": "public.app-category.entertainment",
-      "identity": null
+      "identity": null,
+      "artifactName": "komeview.${ext}"
     },
     "win": {
-      "target": ["portable"]
+      "target": ["portable"],
+      "artifactName": "komeview.${ext}"
     }
   },
   "dependencies": {

@@ -419,3 +419,72 @@ body,
 .has-sub:hover > .submenu {
   display: block;
 }
+
+/* ─── バージョン情報ダイアログ ─── */
+.about {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  background: #1b2030;
+  color: #e5e7eb;
+  border: 1px solid #3a4259;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.about-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.about-version {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+
+.about-desc {
+  margin: 12px 0;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.about-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.about-links a {
+  color: #60a5fa;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.about-links a:hover {
+  text-decoration: underline;
+}
+
+.about-close {
+  padding: 7px 22px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.about-close:hover {
+  background: #2563eb;
+}

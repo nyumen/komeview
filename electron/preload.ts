@@ -17,6 +17,10 @@ const api = {
   setPseudoFullscreen: (on: boolean): void =>
     ipcRenderer.send('window:setPseudoFullscreen', on),
 
+  // アプリ情報 / 外部リンク
+  getVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
+  openExternal: (url: string): void => ipcRenderer.send('app:openExternal', url),
+
   // ファイル
   openFile: (): Promise<{ name: string; content: string } | null> =>
     ipcRenderer.invoke('dialog:openFile'),

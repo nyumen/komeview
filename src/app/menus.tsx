@@ -74,6 +74,7 @@ interface ContextMenuProps {
   onToggleControlBar: () => void
   onToggleAlwaysOnTop: () => void
   onToggleClickThrough: () => void
+  onShowAbout: () => void
   onCloseApp: () => void
   onClose: () => void
 }
@@ -84,7 +85,7 @@ export function ContextMenu(props: ContextMenuProps) {
     alwaysOnTop, clickThrough, pseudoFullscreen, controlBarAlwaysVisible,
     onOpenFile, onToggleFullscreen, onPickFontScale, onPickOpacity,
     onPickBigSeek, onPickBackground, onToggleControlBar, onToggleAlwaysOnTop,
-    onToggleClickThrough, onCloseApp, onClose,
+    onToggleClickThrough, onShowAbout, onCloseApp, onClose,
   } = props
 
   const run = (fn: () => void) => () => { fn(); onClose() }
@@ -177,7 +178,40 @@ export function ContextMenu(props: ContextMenuProps) {
           <span className="menu-check">{clickThrough ? '✓' : ''}</span>クリック透過
         </div>
         <div className="menu-sep" />
+        <div className="menu-item" onClick={run(onShowAbout)}>バージョン情報</div>
         <div className="menu-item danger" onClick={run(onCloseApp)}>閉じる</div>
+      </div>
+    </div>
+  )
+}
+
+// ───────────────────────────────────────────────────────────
+// バージョン情報ダイアログ
+// ───────────────────────────────────────────────────────────
+interface AboutDialogProps {
+  version: string
+  onClose: () => void
+}
+
+export function AboutDialog({ version, onClose }: AboutDialogProps) {
+  const ext = (url: string) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    window.api.openExternal(url)
+  }
+  return (
+    <div className="menu-backdrop" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose() }}>
+      <div className="about" onClick={(e) => e.stopPropagation()}>
+        <div className="about-title">komeview</div>
+        <div className="about-version">version {version || '—'}</div>
+        <div className="about-desc">
+          動画の上にニコニコ風コメントを重ねて表示するアプリ
+        </div>
+        <div className="about-links">
+          <span>作者: kamm</span>
+          <a href="#" onClick={ext('https://x.com/kammjp')}>X @kammjp</a>
+          <a href="#" onClick={ext('https://github.com/nyumen/komeview')}>GitHub</a>
+        </div>
+        <button className="about-close" onClick={onClose}>閉じる</button>
       </div>
     </div>
   )

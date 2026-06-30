@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, dialog, shell } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { DEFAULT_SETTINGS, type Settings } from '../src/shared/settings'
@@ -170,6 +170,11 @@ app.on('open-file', (event, filePath) => {
 // ───────────────────────────────────────────────────────────
 ipcMain.handle('settings:get', () => settings)
 ipcMain.on('settings:save', (_e, partial: Partial<Settings>) => mergeSettings(partial))
+
+ipcMain.handle('app:getVersion', () => app.getVersion())
+ipcMain.on('app:openExternal', (_e, url: string) => {
+  shell.openExternal(url)
+})
 
 ipcMain.on('window:minimize', () => win?.minimize())
 ipcMain.on('window:close', () => win?.close())
