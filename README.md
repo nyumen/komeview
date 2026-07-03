@@ -25,8 +25,9 @@
 [Releases](https://github.com/nyumen/komeview/releases) から各OS向けのファイルをダウンロードしてください。
 
 ### Windows
-- `komeview x.y.z.exe`（ポータブル版）をダウンロードしてダブルクリックで起動。インストール不要です。
+- `komeview-setup.exe`（インストーラー）をダウンロードしてダブルクリック。ワンクリックでインストールされ、そのまま起動します（デスクトップにショートカットも作成されます）。
 - SmartScreen の警告が出たら「詳細情報」→「実行」。
+- アンインストールは Windows の「設定 → アプリ」から行えます。
 
 ### macOS
 - `komeview-x.y.z-arm64.dmg` を開き、`komeview.app` を「アプリケーション」へドラッグ。
@@ -42,7 +43,7 @@
 - ウィンドウに XML ファイルを**ドラッグ＆ドロップ**
 - 右クリックメニュー →「XMLファイルを開く…」
 - **アプリアイコンに XML をドロップ**して起動
-  - Windows: `komeview.exe` に XML をドラッグ
+  - Windows: デスクトップの komeview ショートカットに XML をドラッグ
   - macOS: `komeview.app` / Dock アイコンに XML をドロップ
 
 ### 動画への重ね方
@@ -132,7 +133,7 @@ npm run dev
 # macOS（.dmg / 実行マシンのアーキテクチャ）
 npm run dist:mac
 
-# Windows（x64・ポータブル .exe）
+# Windows（x64・NSISインストーラー）
 npm run dist:win
 
 # 両方
@@ -144,11 +145,11 @@ npm run dist
 | `npm run dev` | Vite + Electron を起動（ホットリロード） |
 | `npm run build` | レンダラー / メイン / プリロードをビルド（`dist/`） |
 | `npm run dist:mac` | macOS 向け `.dmg` を作成 |
-| `npm run dist:win` | Windows 向けポータブル `.exe`（x64）を作成 |
+| `npm run dist:win` | Windows 向けインストーラー `komeview-setup.exe`（x64）を作成 |
 | `npm run dist` | macOS + Windows の両方を作成 |
 
 #### 補足
-- **Windows のポータブル .exe は macOS 上からでもビルドできます**（Wine 不要）。
+- **Windows 向けインストーラーは macOS 上からでもビルドできます**（Wine 不要）。
 - macOS 向けの `.dmg`（特に署名・公証）は基本的に macOS 上でのビルドが必要です。
 - 署名は行っていません（`mac.identity: null`）。
 - macOS は既定で実行マシンのアーキテクチャ（Apple Silicon なら arm64）でビルドされます。Intel 向けや universal が必要な場合は `electron-builder` の `--x64` / `--universal` 等で調整してください。

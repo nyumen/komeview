@@ -18,12 +18,13 @@ export interface BackgroundOption {
   label: string
   css: string
 }
+// グレーは不透明の単色（%は黒に近づく濃さの段階）
 export const BACKGROUND_OPTIONS: BackgroundOption[] = [
   { key: 'transparent', label: '透明', css: 'transparent' },
-  { key: 'gray25', label: 'グレー 25%', css: 'rgba(128, 128, 128, 0.25)' },
-  { key: 'gray50', label: 'グレー 50%', css: 'rgba(128, 128, 128, 0.5)' },
-  { key: 'gray75', label: 'グレー 75%', css: 'rgba(128, 128, 128, 0.75)' },
-  { key: 'black', label: '黒', css: 'rgba(0, 0, 0, 1)' },
+  { key: 'gray25', label: 'グレー 25%', css: '#bfbfbf' },
+  { key: 'gray50', label: 'グレー 50%', css: '#808080' },
+  { key: 'gray75', label: 'グレー 75%', css: '#404040' },
+  { key: 'black', label: '黒', css: '#000000' },
 ]
 export const backgroundCss = (key: string): string =>
   BACKGROUND_OPTIONS.find((o) => o.key === key)?.css ?? 'transparent'

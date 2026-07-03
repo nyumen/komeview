@@ -155,7 +155,8 @@ body,
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--bar-bg);
+  /* 波形エリアの背景は透明にして、背後のコメント/動画が見えるようにする（背景は操作列のみ） */
+  background: transparent;
   padding: 6px 12px 10px;
   z-index: 30;
   opacity: 0;
@@ -173,7 +174,8 @@ body,
 /* ─── シークバー ─── */
 .seekbar {
   position: relative;
-  height: 34px;
+  /* 統計をコメントウィンドウ側へ移したぶん、勢い波形の表示エリアを広げる */
+  height: 56px;
   margin-bottom: 6px;
 }
 
@@ -218,34 +220,41 @@ body,
 
 .seekbar-marker {
   position: absolute;
-  bottom: 10px;
-  width: 8px;
-  height: 8px;
+  /* シークバーのトラックに重ねて表示 */
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   transform: translateX(-50%);
   cursor: pointer;
   border: 1px solid rgba(0, 0, 0, 0.4);
+  z-index: 4;
 }
 
 .seekbar-marker-label {
   position: absolute;
-  /* シークバーの下側に表示（ホバー時刻ツールチップは上側なので重ならない） */
-  top: 18px;
+  /* マーカー点の上に常時表示。背景は半透明で存在感を抑える */
+  bottom: 13px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 10px;
   font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.4);
   padding: 1px 5px;
   border-radius: 3px;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.1s;
   z-index: 5;
 }
 
-.seekbar-marker:hover .seekbar-marker-label {
+/* 「マウスオーバー時のみ表示」モード（右クリック設定で切替 / SPEC §5） */
+.seekbar.labels-hover .seekbar-marker-label {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.seekbar.labels-hover .seekbar-marker:hover .seekbar-marker-label {
   opacity: 1;
 }
 
@@ -277,6 +286,9 @@ body,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: var(--bar-bg);
+  padding: 6px 10px;
+  border-radius: 8px;
 }
 
 .controls-left {
@@ -299,6 +311,13 @@ body,
 
 .ctrl-btn:hover {
   background: rgba(255, 255, 255, 0.22);
+}
+
+/* ▶ ◼ ≪ ≫ の主要4ボタンは文字だけ一回り大きく（ボタンの大きさは他と同じ） */
+.ctrl-btn-lg {
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 6px;
 }
 
 .speed-indicator {
@@ -330,14 +349,27 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
-.stats {
+/* コメント統計（シークバーの少し上・右寄せ / 波形に重なってよい / 下部バーの表示に同期） */
+.stats-overlay {
+  position: absolute;
+  right: 16px;
+  bottom: 62px; /* シークトラックのすぐ上（波形エリア内） */
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  font-size: 10px;
-  color: var(--muted);
-  line-height: 1.35;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.45;
   white-space: nowrap;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 31;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.stats-overlay.visible {
+  opacity: 1;
 }
 
 /* ─── メニュー ─── */

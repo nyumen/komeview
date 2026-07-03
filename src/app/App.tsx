@@ -39,6 +39,7 @@ export function App() {
   const [clickThrough, setClickThrough] = useState(false)
   const [pseudoFullscreen, setPseudoFullscreen] = useState(false)
   const [controlBarAlwaysVisible, setControlBarAlwaysVisible] = useState(false)
+  const [markerLabelsAlwaysVisible, setMarkerLabelsAlwaysVisible] = useState(true)
 
   // ─── UI ───
   const [barVisible, setBarVisible] = useState(false)
@@ -104,15 +105,31 @@ export function App() {
     setIsPlaying(false)
   }, [getTime])
 
+  // スクラブ（位置調整）中の一時停止と自動再開の管理
+  const scrubRef = useRef<{ wasPlaying: boolean; timer: ReturnType<typeof setTimeout> | null }>({
+    wasPlaying: false,
+    timer: null,
+  })
+
+  const cancelScrubResume = useCallback(() => {
+    const s = scrubRef.current
+    if (s.timer) clearTimeout(s.timer)
+    s.timer = null
+    s.wasPlaying = false
+  }, [])
+
   const togglePlay = useCallback(() => {
+    // 明示的な再生/停止操作はスクラブの自動再開予約より優先する
+    cancelScrubResume()
     if (clock.current.playing) pause()
     else play()
-  }, [play, pause])
+  }, [play, pause, cancelScrubResume])
 
   const stop = useCallback(() => {
+    cancelScrubResume()
     pause()
     seekTo(0)
-  }, [pause, seekTo])
+  }, [pause, seekTo, cancelScrubResume])
 
   const applyRate = useCallback(
     (r: number) => {
@@ -134,15 +151,46 @@ export function App() {
     [seekTo]
   )
 
+  // ───────────────────────────────────────────────────────
+  // スクラブシーク：調整中は完全に停止し、入力が終わった瞬間に再開
+  //  - キーボード: keydown で step / keyup で end（押している間は一切進まない）
+  //  - ≪≫ ボタン : 押下中 step 連打 / 指を離すと end
+  //  - ホイール   : step + 短いデバウンスで end（終了イベントが無いため）
+  // ───────────────────────────────────────────────────────
+  const scrubStep = useCallback(
+    (deltaSec: number) => {
+      const s = scrubRef.current
+      if (clock.current.playing) {
+        s.wasPlaying = true
+        pause()
+      }
+      seekTo(getTime() + deltaSec)
+    },
+    [getTime, seekTo, pause]
+  )
+
+  const scrubEnd = useCallback(() => {
+    const s = scrubRef.current
+    if (s.timer) {
+      clearTimeout(s.timer)
+      s.timer = null
+    }
+    if (s.wasPlaying) {
+      s.wasPlaying = false
+      play()
+    }
+  }, [play])
+
+  // アンマウント時にスクラブ再開タイマーを片付ける
+  useEffect(() => {
+    return () => {
+      if (scrubRef.current.timer) clearTimeout(scrubRef.current.timer)
+    }
+  }, [])
+
   // ≪ ≫ ボタンは ←→ キーと同じ ±1秒シーク（SPEC §3, §4）
-  const seekBack = useCallback(
-    () => seekTo(getTime() - FINE_SEEK_SEC),
-    [getTime, seekTo]
-  )
-  const seekForward = useCallback(
-    () => seekTo(getTime() + FINE_SEEK_SEC),
-    [getTime, seekTo]
-  )
+  const seekBack = useCallback(() => scrubStep(-FINE_SEEK_SEC), [scrubStep])
+  const seekForward = useCallback(() => scrubStep(FINE_SEEK_SEC), [scrubStep])
 
   // 次のマーカー（現在位置より後の最初のマーカー）へジャンプ（SPEC §3.1 / "j" キー・ジャンプボタン共通）
   const jumpToNextMarker = useCallback(() => {
@@ -201,6 +249,11 @@ export function App() {
     setControlBarAlwaysVisible(v)
     window.api.saveSettings({ controlBarAlwaysVisible: v })
   }
+  const toggleMarkerLabels = () => {
+    const v = !markerLabelsAlwaysVisible
+    setMarkerLabelsAlwaysVisible(v)
+    window.api.saveSettings({ markerLabelsAlwaysVisible: v })
+  }
   const toggleAlwaysOnTop = () => {
     const v = !alwaysOnTop
     setAlwaysOnTop(v)
@@ -229,10 +282,11 @@ export function App() {
     setDuration(dur)
     setMarkers(findMarkers(parsed))
     setDensity(computeDensity(parsed.map((c) => c.vpos / 100), dur))
-    clock.current.playing = false
+    // 読み込み完了と同時に先頭から自動再生する
+    clock.current.playing = true
     clock.current.baseTime = 0
     clock.current.baseTs = performance.now()
-    setIsPlaying(false)
+    setIsPlaying(true)
     setCurrentTime(0)
   }, [])
 
@@ -287,19 +341,19 @@ export function App() {
           return
         case 'ArrowRight':
           e.preventDefault()
-          seekTo(getTime() + FINE_SEEK_SEC)
+          scrubStep(FINE_SEEK_SEC)
           return
         case 'ArrowLeft':
           e.preventDefault()
-          seekTo(getTime() - FINE_SEEK_SEC)
+          scrubStep(-FINE_SEEK_SEC)
           return
         case 'ArrowUp':
           e.preventDefault()
-          seekTo(getTime() + stateRef.current.bigSeekSec)
+          scrubStep(stateRef.current.bigSeekSec)
           return
         case 'ArrowDown':
           e.preventDefault()
-          seekTo(getTime() - stateRef.current.bigSeekSec)
+          scrubStep(-stateRef.current.bigSeekSec)
           return
         case 'Escape':
           if (stateRef.current.pseudoFullscreen) exitFullscreen()
@@ -313,9 +367,36 @@ export function App() {
       const m = MARKERS.find((mm) => mm.shortcutKey.toLowerCase() === k)
       if (m) jumpMarker(m.key)
     }
+    // 矢印キーを離した瞬間に再生を再開する
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key.startsWith('Arrow')) scrubEnd()
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [togglePlay, seekTo, getTime, jumpMarker, jumpToNextMarker, exitFullscreen])
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [togglePlay, scrubStep, scrubEnd, jumpMarker, jumpToNextMarker, exitFullscreen])
+
+  // マウスホイールでシーク（スクロール中は再生を停止、止むと自動再開）
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      // メニュー表示中は誤操作防止のため無効
+      if (menuOpenRef.current) return
+      if (!stateRef.current.hasComments) return
+      e.preventDefault()
+      // ホイール1ノッチ(deltaY≈100)で約1秒。上スクロール=進む / 下スクロール=戻る
+      scrubStep(-e.deltaY * 0.01)
+      // ホイールには終了イベントが無いので、イベントごとに即時（遅延0）で再開を予約する
+      // （連続スクロール中の合間の再生は数十ms単位で体感されない）
+      const s = scrubRef.current
+      if (s.timer) clearTimeout(s.timer)
+      s.timer = setTimeout(scrubEnd, 0)
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [scrubStep, scrubEnd])
 
   // マウス移動：下部バーの自動表示 ＋ クリック透過の動的切替（SPEC §3, §9）
   useEffect(() => {
@@ -371,6 +452,7 @@ export function App() {
       setClickThrough(s.clickThrough)
       setPseudoFullscreen(s.pseudoFullscreen)
       setControlBarAlwaysVisible(s.controlBarAlwaysVisible)
+      setMarkerLabelsAlwaysVisible(s.markerLabelsAlwaysVisible)
     })
   }, [])
 
@@ -450,6 +532,15 @@ export function App() {
         </div>
       )}
 
+      {/* コメント統計（コメントウィンドウ内・右下） */}
+      {density && (
+        <div className={`stats-overlay ${barVisible ? 'visible' : ''}`}>
+          <span>total {density.total} コメ</span>
+          <span>max {Math.round(density.maxPerMin)} コメ/分</span>
+          <span>avg {Math.round(density.avgPerMin)} コメ/分</span>
+        </div>
+      )}
+
       <BottomBar
         visible={barVisible}
         duration={duration}
@@ -458,11 +549,13 @@ export function App() {
         playbackRate={playbackRate}
         markers={markers}
         density={density}
+        markerLabelsAlwaysVisible={markerLabelsAlwaysVisible}
         nextMarker={nextMarker}
         onPlayPause={togglePlay}
         onStop={stop}
         onSeekBack={seekBack}
         onSeekForward={seekForward}
+        onSeekEnd={scrubEnd}
         onJumpNext={jumpToNextMarker}
         onSeek={seekTo}
         onJumpMarker={jumpMarker}
@@ -492,6 +585,7 @@ export function App() {
           clickThrough={clickThrough}
           pseudoFullscreen={pseudoFullscreen}
           controlBarAlwaysVisible={controlBarAlwaysVisible}
+          markerLabelsAlwaysVisible={markerLabelsAlwaysVisible}
           onOpenFile={openFile}
           onToggleFullscreen={toggleFullscreen}
           onPickFontScale={applyFontScale}
@@ -499,6 +593,7 @@ export function App() {
           onPickBigSeek={applyBigSeek}
           onPickBackground={applyBackground}
           onToggleControlBar={toggleControlBar}
+          onToggleMarkerLabels={toggleMarkerLabels}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
           onToggleClickThrough={toggleClickThrough}
           onShowAbout={() => setShowAbout(true)}

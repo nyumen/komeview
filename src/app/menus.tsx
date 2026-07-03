@@ -65,6 +65,7 @@ interface ContextMenuProps {
   clickThrough: boolean
   pseudoFullscreen: boolean
   controlBarAlwaysVisible: boolean
+  markerLabelsAlwaysVisible: boolean
   onOpenFile: () => void
   onToggleFullscreen: () => void
   onPickFontScale: (scale: number) => void
@@ -72,6 +73,7 @@ interface ContextMenuProps {
   onPickBigSeek: (sec: number) => void
   onPickBackground: (key: string) => void
   onToggleControlBar: () => void
+  onToggleMarkerLabels: () => void
   onToggleAlwaysOnTop: () => void
   onToggleClickThrough: () => void
   onShowAbout: () => void
@@ -83,9 +85,10 @@ export function ContextMenu(props: ContextMenuProps) {
   const {
     x, y, fontScale, commentOpacity, bigSeekSec, background,
     alwaysOnTop, clickThrough, pseudoFullscreen, controlBarAlwaysVisible,
+    markerLabelsAlwaysVisible,
     onOpenFile, onToggleFullscreen, onPickFontScale, onPickOpacity,
-    onPickBigSeek, onPickBackground, onToggleControlBar, onToggleAlwaysOnTop,
-    onToggleClickThrough, onShowAbout, onCloseApp, onClose,
+    onPickBigSeek, onPickBackground, onToggleControlBar, onToggleMarkerLabels,
+    onToggleAlwaysOnTop, onToggleClickThrough, onShowAbout, onCloseApp, onClose,
   } = props
 
   const run = (fn: () => void) => () => { fn(); onClose() }
@@ -170,6 +173,9 @@ export function ContextMenu(props: ContextMenuProps) {
         <div className="menu-sep" />
         <div className="menu-item" onClick={run(onToggleControlBar)}>
           <span className="menu-check">{controlBarAlwaysVisible ? '✓' : ''}</span>操作パネルを常時表示
+        </div>
+        <div className="menu-item" onClick={run(onToggleMarkerLabels)}>
+          <span className="menu-check">{markerLabelsAlwaysVisible ? '✓' : ''}</span>マーカーラベルを常時表示
         </div>
         <div className="menu-item" onClick={run(onToggleAlwaysOnTop)}>
           <span className="menu-check">{alwaysOnTop ? '✓' : ''}</span>最前面

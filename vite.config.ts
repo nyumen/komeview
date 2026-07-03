@@ -11,6 +11,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    // wait-on が 127.0.0.1 を監視するため IPv4 に固定（環境によって ::1 のみで待ち受けて詰まるのを防ぐ）
+    host: '127.0.0.1',
     port: 5173,
     strictPort: true,
   },

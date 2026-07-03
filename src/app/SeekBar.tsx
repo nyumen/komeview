@@ -9,6 +9,8 @@ interface Props {
   currentTime: number
   markers: Record<MarkerKey, number | null>
   density: DensityResult | null
+  /** マーカーラベルを常時表示するか（false ならマウスオーバー時のみ） */
+  markerLabelsAlwaysVisible: boolean
   onSeek: (time: number) => void
   onJumpMarker: (key: MarkerKey) => void
 }
@@ -18,6 +20,7 @@ export function SeekBar({
   currentTime,
   markers,
   density,
+  markerLabelsAlwaysVisible,
   onSeek,
   onJumpMarker,
 }: Props) {
@@ -71,7 +74,7 @@ export function SeekBar({
   }
 
   return (
-    <div className="seekbar">
+    <div className={`seekbar ${markerLabelsAlwaysVisible ? '' : 'labels-hover'}`}>
       {/* 勢い波形 */}
       <svg
         className="seekbar-wave"

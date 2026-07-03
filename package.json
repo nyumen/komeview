@@ -14,8 +14,8 @@
     "start": "npm run build:main && npm run build:preload && electron .",
     "dev": "concurrently \"vite\" \"wait-on tcp:127.0.0.1:5173 && npm run build:main && npm run build:preload && electron .\"",
     "dist:mac": "npm run build && electron-builder --mac dmg --publish never",
-    "dist:win": "npm run build && electron-builder --win portable --x64 --publish never",
-    "dist": "npm run build && electron-builder --mac dmg --publish never && electron-builder --win portable --x64 --publish never"
+    "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "dist": "npm run build && electron-builder --mac dmg --publish never && electron-builder --win nsis --x64 --publish never"
   },
   "build": {
     "appId": "com.komeview.app",
@@ -44,8 +44,12 @@
       "artifactName": "komeview.${ext}"
     },
     "win": {
-      "target": ["portable"],
+      "target": ["nsis"],
       "artifactName": "komeview.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "artifactName": "komeview-setup.${ext}"
     }
   },
   "dependencies": {

@@ -73,8 +73,24 @@ function exitPseudoFullscreen() {
   if (nb) win.setBounds(nb)
 }
 
+/** 保存された bounds がいずれかのディスプレイと十分重なっているか（画面外復元の防止） */
+function isBoundsVisible(b: { x: number; y: number; width: number; height: number }): boolean {
+  return screen.getAllDisplays().some((d) => {
+    const a = d.workArea
+    // 50px 以上重なっていれば「見えている」とみなす
+    const overlapW = Math.min(b.x + b.width, a.x + a.width) - Math.max(b.x, a.x)
+    const overlapH = Math.min(b.y + b.height, a.y + a.height) - Math.max(b.y, a.y)
+    return overlapW >= 50 && overlapH >= 50
+  })
+}
+
 function createWindow() {
-  const b = settings.windowBounds
+  let b = settings.windowBounds
+  // 画面外を指す保存位置は破棄してデフォルト表示にする
+  if (b && !isBoundsVisible(b)) {
+    b = null
+    mergeSettings({ windowBounds: null })
+  }
   win = new BrowserWindow({
     width: b?.width ?? 900,
     height: b?.height ?? 520,

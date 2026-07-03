@@ -12,12 +12,15 @@ interface Props {
   playbackRate: number
   markers: Record<MarkerKey, number | null>
   density: DensityResult | null
+  markerLabelsAlwaysVisible: boolean
   /** 次のジャンプ先（無ければ null）SPEC §3.1 */
   nextMarker: { label: string; remainingSec: number } | null
   onPlayPause: () => void
   onStop: () => void
   onSeekBack: () => void
   onSeekForward: () => void
+  /** ≪≫ から指を離した時（スクラブ終了 → 再生再開） */
+  onSeekEnd: () => void
   onJumpNext: () => void
   onSeek: (time: number) => void
   onJumpMarker: (key: MarkerKey) => void
@@ -32,11 +35,13 @@ export function BottomBar({
   playbackRate,
   markers,
   density,
+  markerLabelsAlwaysVisible,
   nextMarker,
   onPlayPause,
   onStop,
   onSeekBack,
   onSeekForward,
+  onSeekEnd,
   onJumpNext,
   onSeek,
   onJumpMarker,
@@ -65,10 +70,15 @@ export function BottomBar({
   // アンマウント時にタイマーを片付ける
   useEffect(() => stopHold, [])
 
+  const endHold = () => {
+    stopHold()
+    onSeekEnd() // スクラブ終了 → 再生を再開
+  }
+
   const holdProps = (action: () => void) => ({
     onPointerDown: () => startHold(action),
-    onPointerUp: stopHold,
-    onPointerLeave: stopHold,
+    onPointerUp: endHold,
+    onPointerLeave: endHold,
   })
 
   return (
@@ -78,22 +88,23 @@ export function BottomBar({
         currentTime={currentTime}
         markers={markers}
         density={density}
+        markerLabelsAlwaysVisible={markerLabelsAlwaysVisible}
         onSeek={onSeek}
         onJumpMarker={onJumpMarker}
       />
 
       <div className="controls">
         <div className="controls-left">
-          <button className="ctrl-btn" onClick={onPlayPause} title="再生 / 一時停止 (Space)">
+          <button className="ctrl-btn ctrl-btn-lg" onClick={onPlayPause} title="再生 / 一時停止 (Space)">
             {isPlaying ? '⏸' : '▶'}
           </button>
-          <button className="ctrl-btn" onClick={onStop} title="停止">
+          <button className="ctrl-btn ctrl-btn-lg" onClick={onStop} title="停止">
             ◼
           </button>
-          <button className="ctrl-btn" {...holdProps(onSeekBack)} title="1秒戻る (←) ・長押しで連続">
+          <button className="ctrl-btn ctrl-btn-lg" {...holdProps(onSeekBack)} title="1秒戻る (←) ・長押しで連続">
             ≪
           </button>
-          <button className="ctrl-btn" {...holdProps(onSeekForward)} title="1秒進む (→) ・長押しで連続">
+          <button className="ctrl-btn ctrl-btn-lg" {...holdProps(onSeekForward)} title="1秒進む (→) ・長押しで連続">
             ≫
           </button>
           <button
@@ -125,14 +136,6 @@ export function BottomBar({
             </span>
           )}
         </div>
-
-        {density && (
-          <div className="stats">
-            <span>total {density.total} コメ</span>
-            <span>max {Math.round(density.maxPerMin)} コメ/分</span>
-            <span>avg {Math.round(density.avgPerMin)} コメ/分</span>
-          </div>
-        )}
       </div>
     </div>
   )
