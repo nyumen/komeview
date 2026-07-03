@@ -3,9 +3,11 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from 'react'
 import NiconiComments from '@xpadev-net/niconicomments'
 import type { FormattedComment } from './xml'
+import { LAZY_THRESHOLD } from './constants'
 
 export interface OverlayHandle {
   draw(vpos: number): void
@@ -25,17 +27,25 @@ export const Overlay = forwardRef<OverlayHandle, Props>(
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const ncRef = useRef<NiconiComments | null>(null)
     const lastVposRef = useRef(0)
+    // 直近に実際へ描画した整数 vpos。同じ値なら再描画をスキップ（一時停止中のCPU節約）
+    const lastDrawnRef = useRef(-1)
 
     useImperativeHandle(
       ref,
       () => ({
         draw(vpos: number) {
           lastVposRef.current = vpos
-          ncRef.current?.drawCanvas(Math.floor(vpos))
+          const v = Math.floor(vpos)
+          if (v === lastDrawnRef.current) return
+          lastDrawnRef.current = v
+          ncRef.current?.drawCanvas(v)
         },
       }),
       []
     )
+
+    // 再構築（初期化）は同期処理でUIが固まるため、先に「再構築中…」を描画してから実行する
+    const [rebuilding, setRebuilding] = useState(false)
 
     useEffect(() => {
       const canvas = canvasRef.current
@@ -44,26 +54,48 @@ export const Overlay = forwardRef<OverlayHandle, Props>(
       canvas.width = 1920
       canvas.height = 1080
 
-      if (ncRef.current) {
-        ncRef.current.clear()
-        ncRef.current.destroy()
-        ncRef.current = null
+      if (comments.length === 0) {
+        if (ncRef.current) {
+          ncRef.current.clear()
+          ncRef.current.destroy()
+          ncRef.current = null
+        }
+        const ctx = canvas.getContext('2d')
+        ctx?.clearRect(0, 0, canvas.width, canvas.height)
+        return
       }
 
-      if (comments.length > 0) {
+      // 「再構築中…」の表示を先にペイントさせてから重い初期化を始める
+      setRebuilding(true)
+      const id = setTimeout(() => {
+        if (ncRef.current) {
+          ncRef.current.clear()
+          ncRef.current.destroy()
+          ncRef.current = null
+        }
         ncRef.current = new NiconiComments(canvas, comments, {
           format: 'formatted',
           mode: 'html5',
           scale: fontScale,
+          // 大量コメント時のみ lazy を有効化（SPEC §7）。
+          // lazy は読み込み時のフリーズを防ぐ代わりにシーク直後の位置解決が重くなるため、
+          // 通常サイズのファイルでは eager（事前計算）のままにする。
+          lazy: comments.length > LAZY_THRESHOLD,
         } as ConstructorParameters<typeof NiconiComments>[2])
-        ncRef.current.drawCanvas(Math.floor(lastVposRef.current))
-      } else {
-        const ctx = canvas.getContext('2d')
-        ctx?.clearRect(0, 0, canvas.width, canvas.height)
-      }
+        lastDrawnRef.current = Math.floor(lastVposRef.current)
+        ncRef.current.drawCanvas(lastDrawnRef.current)
+        setRebuilding(false)
+      }, 30)
+
+      return () => clearTimeout(id)
     }, [comments, fontScale])
 
-    return <canvas ref={canvasRef} className="overlay-canvas" style={{ opacity }} />
+    return (
+      <>
+        <canvas ref={canvasRef} className="overlay-canvas" style={{ opacity }} />
+        {rebuilding && <div className="rebuilding-hint">コメントを再構築中…</div>}
+      </>
+    )
   }
 )
 

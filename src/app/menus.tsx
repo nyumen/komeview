@@ -6,6 +6,7 @@ import {
   OPACITY_LEVELS,
   BIG_SEEK_PRESETS,
   BACKGROUND_OPTIONS,
+  THINNING_PRESETS,
 } from './constants'
 
 // ───────────────────────────────────────────────────────────
@@ -66,12 +67,14 @@ interface ContextMenuProps {
   pseudoFullscreen: boolean
   controlBarAlwaysVisible: boolean
   markerLabelsAlwaysVisible: boolean
+  thinningPerSec: number
   onOpenFile: () => void
   onToggleFullscreen: () => void
   onPickFontScale: (scale: number) => void
   onPickOpacity: (opacity: number) => void
   onPickBigSeek: (sec: number) => void
   onPickBackground: (key: string) => void
+  onPickThinning: (perSec: number) => void
   onToggleControlBar: () => void
   onToggleMarkerLabels: () => void
   onToggleAlwaysOnTop: () => void
@@ -85,10 +88,11 @@ export function ContextMenu(props: ContextMenuProps) {
   const {
     x, y, fontScale, commentOpacity, bigSeekSec, background,
     alwaysOnTop, clickThrough, pseudoFullscreen, controlBarAlwaysVisible,
-    markerLabelsAlwaysVisible,
+    markerLabelsAlwaysVisible, thinningPerSec,
     onOpenFile, onToggleFullscreen, onPickFontScale, onPickOpacity,
-    onPickBigSeek, onPickBackground, onToggleControlBar, onToggleMarkerLabels,
-    onToggleAlwaysOnTop, onToggleClickThrough, onShowAbout, onCloseApp, onClose,
+    onPickBigSeek, onPickBackground, onPickThinning, onToggleControlBar,
+    onToggleMarkerLabels, onToggleAlwaysOnTop, onToggleClickThrough,
+    onShowAbout, onCloseApp, onClose,
   } = props
 
   const run = (fn: () => void) => () => { fn(); onClose() }
@@ -152,6 +156,19 @@ export function ContextMenu(props: ContextMenuProps) {
               <div key={s} className="menu-item" onClick={run(() => onPickBigSeek(s))}>
                 <span className="menu-check">{bigSeekSec === s ? '✓' : ''}</span>
                 {s}秒
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* コメント最大表示数 ▸ */}
+        <div className="menu-item has-sub">
+          コメント最大表示数<span className="sub-arrow">▸</span>
+          <div className="submenu">
+            {THINNING_PRESETS.map((t) => (
+              <div key={t.value} className="menu-item" onClick={run(() => onPickThinning(t.value))}>
+                <span className="menu-check">{thinningPerSec === t.value ? '✓' : ''}</span>
+                {t.label}
               </div>
             ))}
           </div>

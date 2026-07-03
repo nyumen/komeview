@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MARKERS,
   findMarkers,
@@ -8,7 +8,7 @@ import {
 import { Overlay, type OverlayHandle } from './Overlay'
 import { BottomBar } from './BottomBar'
 import { SpeedMenu, ContextMenu, AboutDialog } from './menus'
-import { parseNicoXML, type FormattedComment } from './xml'
+import { parseNicoXML, thinComments, type FormattedComment } from './xml'
 import { computeDensity, type DensityResult } from './density'
 import { MARKER_LABELS, backgroundCss } from './constants'
 
@@ -40,6 +40,13 @@ export function App() {
   const [pseudoFullscreen, setPseudoFullscreen] = useState(false)
   const [controlBarAlwaysVisible, setControlBarAlwaysVisible] = useState(false)
   const [markerLabelsAlwaysVisible, setMarkerLabelsAlwaysVisible] = useState(true)
+  const [thinningPerSec, setThinningPerSec] = useState(0)
+
+  // 描画用コメント（間引きは描画のみ。統計・マーカーは全コメントから計算する / SPEC §7）
+  const displayComments = useMemo(
+    () => thinComments(comments, thinningPerSec),
+    [comments, thinningPerSec]
+  )
 
   // ─── UI ───
   const [barVisible, setBarVisible] = useState(false)
@@ -254,6 +261,10 @@ export function App() {
     setMarkerLabelsAlwaysVisible(v)
     window.api.saveSettings({ markerLabelsAlwaysVisible: v })
   }
+  const applyThinning = (n: number) => {
+    setThinningPerSec(n)
+    window.api.saveSettings({ thinningPerSec: n })
+  }
   const toggleAlwaysOnTop = () => {
     const v = !alwaysOnTop
     setAlwaysOnTop(v)
@@ -453,6 +464,7 @@ export function App() {
       setPseudoFullscreen(s.pseudoFullscreen)
       setControlBarAlwaysVisible(s.controlBarAlwaysVisible)
       setMarkerLabelsAlwaysVisible(s.markerLabelsAlwaysVisible)
+      setThinningPerSec(s.thinningPerSec)
     })
   }, [])
 
@@ -520,7 +532,7 @@ export function App() {
 
       <Overlay
         ref={overlayRef}
-        comments={comments}
+        comments={displayComments}
         fontScale={fontScale}
         opacity={commentOpacity}
       />
@@ -586,12 +598,14 @@ export function App() {
           pseudoFullscreen={pseudoFullscreen}
           controlBarAlwaysVisible={controlBarAlwaysVisible}
           markerLabelsAlwaysVisible={markerLabelsAlwaysVisible}
+          thinningPerSec={thinningPerSec}
           onOpenFile={openFile}
           onToggleFullscreen={toggleFullscreen}
           onPickFontScale={applyFontScale}
           onPickOpacity={applyCommentOpacity}
           onPickBigSeek={applyBigSeek}
           onPickBackground={applyBackground}
+          onPickThinning={applyThinning}
           onToggleControlBar={toggleControlBar}
           onToggleMarkerLabels={toggleMarkerLabels}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}

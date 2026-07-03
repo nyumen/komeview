@@ -12,6 +12,17 @@ export const OPACITY_LEVELS = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5]
 /** 大きいシーク量プリセット（秒、↑↓） */
 export const BIG_SEEK_PRESETS = [3, 5, 10, 15, 30]
 
+/** コメント最大表示数プリセット（秒間の最大表示件数。0 = 制限なし / SPEC §7） */
+export const THINNING_PRESETS = [
+  { value: 0, label: '制限なし' },
+  { value: 100, label: '秒間 100件' },
+  { value: 50, label: '秒間 50件' },
+  { value: 25, label: '秒間 25件' },
+]
+
+/** この件数を超えるコメントを読み込んだ場合のみ lazy レンダリングを有効化（SPEC §7） */
+export const LAZY_THRESHOLD = 30000
+
 /** ウィンドウ背景の選択肢（SPEC §2.4）。デフォルトは透明。 */
 export interface BackgroundOption {
   key: string

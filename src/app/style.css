@@ -109,6 +109,21 @@ body,
   height: 100%;
 }
 
+/* ─── 再構築中の表示 ─── */
+.rebuilding-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #e5e7eb;
+  font-size: 14px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  z-index: 20;
+  pointer-events: none;
+}
+
 /* ─── 空状態の案内 ─── */
 .empty-hint {
   position: absolute;

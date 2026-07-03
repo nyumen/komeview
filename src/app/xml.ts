@@ -51,3 +51,42 @@ export function parseNicoXML(xmlText: string): FormattedComment[] {
 
   return comments.sort((a, b) => a.vpos - b.vpos)
 }
+
+/**
+ * 描画用のコメント間引き（SPEC §7）。
+ * 1秒バケットごとに最大 perSec 件を等間隔サンプリングして残す。
+ * 統計（勢い・total/max/avg）は間引き前の全コメントから計算するため、ここでは描画分だけを削る。
+ */
+export function thinComments(
+  comments: FormattedComment[],
+  perSec: number
+): FormattedComment[] {
+  if (perSec <= 0) return comments
+
+  // vpos 昇順前提で1秒（100 vpos）ごとにまとめる
+  const result: FormattedComment[] = []
+  let bucketStart = 0
+  const flush = (end: number) => {
+    const m = end - bucketStart
+    if (m <= perSec) {
+      for (let i = bucketStart; i < end; i++) result.push(comments[i])
+    } else {
+      // 等間隔に perSec 件を抽出
+      for (let k = 0; k < perSec; k++) {
+        result.push(comments[bucketStart + Math.floor((k * m) / perSec)])
+      }
+    }
+    bucketStart = end
+  }
+
+  let currentSec = comments.length ? Math.floor(comments[0].vpos / 100) : 0
+  for (let i = 0; i < comments.length; i++) {
+    const sec = Math.floor(comments[i].vpos / 100)
+    if (sec !== currentSec) {
+      flush(i)
+      currentSec = sec
+    }
+  }
+  flush(comments.length)
+  return result
+}

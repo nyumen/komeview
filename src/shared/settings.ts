@@ -29,6 +29,8 @@ export interface Settings {
   controlBarAlwaysVisible: boolean
   /** シークバーのマーカーラベルを常時表示（false ならマウスオーバー時のみ）SPEC §5 */
   markerLabelsAlwaysVisible: boolean
+  /** コメント間引き（描画のみ）：秒間の最大表示件数。0 = 間引きなし SPEC §7 */
+  thinningPerSec: number
   /** 通常時のウィンドウ位置/サイズ（擬似全画面の復元先） */
   windowBounds: WindowBounds | null
 }
@@ -44,5 +46,6 @@ export const DEFAULT_SETTINGS: Settings = {
   pseudoFullscreen: false,
   controlBarAlwaysVisible: false,
   markerLabelsAlwaysVisible: true,
+  thinningPerSec: 0,
   windowBounds: null,
 }
