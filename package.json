@@ -1,7 +1,7 @@
 {
   "name": "komeview",
   "productName": "komeview",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "動画の再生画面にニコニコのコメントを重ねて表示するデスクトップアプリ",
   "author": "kamm (https://github.com/nyumen)",
   "main": "dist/main.js",
@@ -38,13 +38,17 @@
       }
     ],
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "category": "public.app-category.entertainment",
       "identity": null,
       "artifactName": "komeview.${ext}"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "artifactName": "komeview.${ext}"
     },
     "nsis": {
