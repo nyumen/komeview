@@ -53,3 +53,19 @@ jobs:
         with:
           files: artifacts/**/*
           generate_release_notes: true
+          body: |
+            ## ダウンロード
+            - **Windows**: `komeview-setup.exe`（インストーラー）
+            - **macOS (Apple Silicon)**: `komeview.dmg`
+
+            ### macOS で「"komeview"は壊れているため開けません」と出る場合
+            署名・公証をしていないための Gatekeeper のブロックです（アプリは壊れていません）。
+            ターミナルで次を一度だけ実行してください:
+            ```sh
+            xattr -cr /Applications/komeview.app
+            ```
+
+            ### Windows で SmartScreen の警告が出る場合
+            「詳細情報」→「実行」で進めてください。
+
+            ---
