@@ -31,6 +31,12 @@ export interface Settings {
   markerLabelsAlwaysVisible: boolean
   /** コメント間引き（描画のみ）：秒間の最大表示件数。0 = 間引きなし SPEC §7 */
   thinningPerSec: number
+  /** コメントリストパネルの表示 SPEC §13将来構想→実装 */
+  commentListVisible: boolean
+  /** NGユーザー（生の user_id 文字列）。該当コメントは描画・リストから除外 */
+  ngUserIds: string[]
+  /** NGコメント（本文の完全一致）。該当コメントは描画・リストから除外 */
+  ngWords: string[]
   /** 通常時のウィンドウ位置/サイズ（擬似全画面の復元先） */
   windowBounds: WindowBounds | null
 }
@@ -47,5 +53,8 @@ export const DEFAULT_SETTINGS: Settings = {
   controlBarAlwaysVisible: false,
   markerLabelsAlwaysVisible: true,
   thinningPerSec: 0,
+  commentListVisible: false,
+  ngUserIds: [],
+  ngWords: [],
   windowBounds: null,
 }

@@ -109,6 +109,140 @@ body,
   height: 100%;
 }
 
+/* ─── コメントリストパネル ─── */
+:root {
+  --panel-w: 280px;
+}
+
+.comment-panel {
+  position: absolute;
+  top: var(--titlebar-h);
+  right: 0;
+  bottom: 0;
+  width: var(--panel-w);
+  background: rgba(20, 22, 28, 0.92);
+  border-left: 1px solid rgba(150, 160, 175, 0.4);
+  display: flex;
+  flex-direction: column;
+  z-index: 28;
+}
+
+.app.fullscreen .comment-panel {
+  top: 0;
+}
+
+.comment-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e7eb;
+  border-bottom: 1px solid rgba(150, 160, 175, 0.25);
+}
+
+.comment-panel-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.comment-panel-list {
+  flex: 1;
+}
+
+.comment-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.comment-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.comment-row.past {
+  color: #9ca3af;
+}
+
+/* NG行（リストには表示したまま色で示し、右クリックで解除できる） */
+.comment-row.ng-user .comment-row-body {
+  color: #fb923c; /* NGユーザー: オレンジ */
+}
+
+.comment-row.ng-word .comment-row-body {
+  color: #7c93f0; /* NGコメント: 紺（青系） */
+}
+
+.comment-row.ng-user .comment-row-body::after,
+.comment-row.ng-word .comment-row-body::after {
+  content: ' [NG]';
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.comment-row-body {
+  flex: 1;
+  word-break: break-all;
+}
+
+.comment-row-time {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #93c5fd;
+  white-space: nowrap;
+}
+
+/* 行の右クリックメニュー（コピー / NG設定） */
+.row-menu {
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.row-menu-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-label {
+  padding: 3px 14px;
+  font-size: 11px;
+  color: #64748b;
+  cursor: default;
+}
+
+.row-menu-item .row-menu-sub {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+/* パネル表示中はコメント描画・下部バー・統計を左に寄せる */
+.app.panel-open .overlay-canvas {
+  width: calc(100% - var(--panel-w));
+}
+
+.app.panel-open .bottom-bar {
+  right: var(--panel-w);
+}
+
+.app.panel-open .stats-overlay {
+  right: calc(var(--panel-w) + 16px);
+}
+
 /* ─── 再構築中の表示 ─── */
 .rebuilding-hint {
   position: absolute;

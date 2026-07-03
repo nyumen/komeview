@@ -68,6 +68,8 @@ interface ContextMenuProps {
   controlBarAlwaysVisible: boolean
   markerLabelsAlwaysVisible: boolean
   thinningPerSec: number
+  commentListVisible: boolean
+  ngCount: number
   onOpenFile: () => void
   onToggleFullscreen: () => void
   onPickFontScale: (scale: number) => void
@@ -77,6 +79,8 @@ interface ContextMenuProps {
   onPickThinning: (perSec: number) => void
   onToggleControlBar: () => void
   onToggleMarkerLabels: () => void
+  onToggleCommentList: () => void
+  onClearNg: () => void
   onToggleAlwaysOnTop: () => void
   onToggleClickThrough: () => void
   onShowAbout: () => void
@@ -88,10 +92,11 @@ export function ContextMenu(props: ContextMenuProps) {
   const {
     x, y, fontScale, commentOpacity, bigSeekSec, background,
     alwaysOnTop, clickThrough, pseudoFullscreen, controlBarAlwaysVisible,
-    markerLabelsAlwaysVisible, thinningPerSec,
+    markerLabelsAlwaysVisible, thinningPerSec, commentListVisible, ngCount,
     onOpenFile, onToggleFullscreen, onPickFontScale, onPickOpacity,
     onPickBigSeek, onPickBackground, onPickThinning, onToggleControlBar,
-    onToggleMarkerLabels, onToggleAlwaysOnTop, onToggleClickThrough,
+    onToggleMarkerLabels, onToggleCommentList, onClearNg,
+    onToggleAlwaysOnTop, onToggleClickThrough,
     onShowAbout, onCloseApp, onClose,
   } = props
 
@@ -119,6 +124,9 @@ export function ContextMenu(props: ContextMenuProps) {
         <div className="menu-sep" />
         <div className="menu-item" onClick={run(onToggleFullscreen)}>
           <span className="menu-check">{pseudoFullscreen ? '✓' : ''}</span>全画面
+        </div>
+        <div className="menu-item" onClick={run(onToggleCommentList)}>
+          <span className="menu-check">{commentListVisible ? '✓' : ''}</span>コメントリスト
         </div>
         <div className="menu-sep" />
 
@@ -200,6 +208,11 @@ export function ContextMenu(props: ContextMenuProps) {
         <div className="menu-item" onClick={run(onToggleClickThrough)}>
           <span className="menu-check">{clickThrough ? '✓' : ''}</span>クリック透過
         </div>
+        {ngCount > 0 && (
+          <div className="menu-item" onClick={run(onClearNg)}>
+            NGリストをクリア（{ngCount}件）
+          </div>
+        )}
         <div className="menu-sep" />
         <div className="menu-item" onClick={run(onShowAbout)}>バージョン情報</div>
         <div className="menu-item danger" onClick={run(onCloseApp)}>閉じる</div>

@@ -1,7 +1,7 @@
 {
   "name": "komeview",
   "productName": "komeview",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "動画の再生画面にニコニコのコメントを重ねて表示するデスクトップアプリ",
   "author": "kamm (https://github.com/nyumen)",
   "main": "dist/main.js",
@@ -59,7 +59,8 @@
   "dependencies": {
     "@xpadev-net/niconicomments": "^0.2.78",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-virtuoso": "^4.18.10"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

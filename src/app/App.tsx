@@ -7,6 +7,7 @@ import {
 } from '../shared/markers'
 import { Overlay, type OverlayHandle } from './Overlay'
 import { BottomBar } from './BottomBar'
+import { CommentPanel } from './CommentPanel'
 import { SpeedMenu, ContextMenu, AboutDialog } from './menus'
 import { parseNicoXML, thinComments, type FormattedComment } from './xml'
 import { computeDensity, type DensityResult } from './density'
@@ -20,6 +21,7 @@ const clampRate = (r: number) => Math.min(4, Math.max(0.1, Math.round(r * 100) /
 export function App() {
   // ─── コンテンツ ───
   const [comments, setComments] = useState<FormattedComment[]>([])
+  const [userIds, setUserIds] = useState<string[]>([]) // comments と同順の生 user_id
   const [fileName, setFileName] = useState('')
   const [duration, setDuration] = useState(0)
   const [markers, setMarkers] = useState<Record<MarkerKey, number | null>>(emptyMarkers())
@@ -41,11 +43,29 @@ export function App() {
   const [controlBarAlwaysVisible, setControlBarAlwaysVisible] = useState(false)
   const [markerLabelsAlwaysVisible, setMarkerLabelsAlwaysVisible] = useState(true)
   const [thinningPerSec, setThinningPerSec] = useState(0)
+  const [commentListVisible, setCommentListVisible] = useState(false)
+  const [ngUserIds, setNgUserIds] = useState<string[]>([])
+  const [ngWords, setNgWords] = useState<string[]>([])
 
-  // 描画用コメント（間引きは描画のみ。統計・マーカーは全コメントから計算する / SPEC §7）
+  // NG除外（描画・リスト共通。統計・マーカーは全コメントから計算する）
+  const ngFiltered = useMemo(() => {
+    if (ngUserIds.length === 0 && ngWords.length === 0) return { comments, userIds }
+    const ngU = new Set(ngUserIds)
+    const ngW = new Set(ngWords)
+    const fc: FormattedComment[] = []
+    const fu: string[] = []
+    for (let i = 0; i < comments.length; i++) {
+      if (ngU.has(userIds[i]) || ngW.has(comments[i].content)) continue
+      fc.push(comments[i])
+      fu.push(userIds[i])
+    }
+    return { comments: fc, userIds: fu }
+  }, [comments, userIds, ngUserIds, ngWords])
+
+  // 描画用コメント（間引きは描画のみ / SPEC §7）
   const displayComments = useMemo(
-    () => thinComments(comments, thinningPerSec),
-    [comments, thinningPerSec]
+    () => thinComments(ngFiltered.comments, thinningPerSec),
+    [ngFiltered, thinningPerSec]
   )
 
   // ─── UI ───
@@ -265,6 +285,32 @@ export function App() {
     setThinningPerSec(n)
     window.api.saveSettings({ thinningPerSec: n })
   }
+  const toggleCommentList = () => {
+    const v = !commentListVisible
+    setCommentListVisible(v)
+    window.api.saveSettings({ commentListVisible: v })
+  }
+  const toggleNgUser = (uid: string) => {
+    if (!uid) return
+    const next = ngUserIds.includes(uid)
+      ? ngUserIds.filter((x) => x !== uid)
+      : [...ngUserIds, uid]
+    setNgUserIds(next)
+    window.api.saveSettings({ ngUserIds: next })
+  }
+  const toggleNgWord = (word: string) => {
+    if (!word) return
+    const next = ngWords.includes(word)
+      ? ngWords.filter((x) => x !== word)
+      : [...ngWords, word]
+    setNgWords(next)
+    window.api.saveSettings({ ngWords: next })
+  }
+  const clearNg = () => {
+    setNgUserIds([])
+    setNgWords([])
+    window.api.saveSettings({ ngUserIds: [], ngWords: [] })
+  }
   const toggleAlwaysOnTop = () => {
     const v = !alwaysOnTop
     setAlwaysOnTop(v)
@@ -281,7 +327,7 @@ export function App() {
   // ファイル読み込み
   // ───────────────────────────────────────────────────────
   const loadXmlText = useCallback((name: string, text: string) => {
-    const parsed = parseNicoXML(text)
+    const { comments: parsed, userIds: parsedIds } = parseNicoXML(text)
     if (parsed.length === 0) {
       window.alert('コメントが見つかりませんでした。正しいニコニコXMLか確認してください。')
       return
@@ -289,6 +335,7 @@ export function App() {
     const lastVpos = parsed[parsed.length - 1].vpos
     const dur = Math.ceil(lastVpos / 100) + 10
     setComments(parsed)
+    setUserIds(parsedIds)
     setFileName(name)
     setDuration(dur)
     setMarkers(findMarkers(parsed))
@@ -396,6 +443,8 @@ export function App() {
       // メニュー表示中は誤操作防止のため無効
       if (menuOpenRef.current) return
       if (!stateRef.current.hasComments) return
+      // コメントリストパネル上ではリストのスクロールに任せる（シークしない）
+      if ((e.target as HTMLElement | null)?.closest('.comment-panel')) return
       e.preventDefault()
       // ホイール1ノッチ(deltaY≈100)で約1秒。上スクロール=進む / 下スクロール=戻る
       scrubStep(-e.deltaY * 0.01)
@@ -414,9 +463,11 @@ export function App() {
     const onMove = (e: MouseEvent) => {
       const nearBottom = e.clientY >= window.innerHeight - 90
       const nearTop = !pseudoFullscreen && e.clientY <= 40
+      // コメントリストパネル表示中は右端の帯も操作可能領域にする
+      const inPanel = commentListVisible && e.clientX >= window.innerWidth - 280
       setBarVisible(controlBarAlwaysVisible || nearBottom || menuOpenRef.current)
       if (clickThrough) {
-        const interactive = nearBottom || nearTop || menuOpenRef.current
+        const interactive = nearBottom || nearTop || inPanel || menuOpenRef.current
         const ignore = !interactive
         if (lastIgnoreRef.current !== ignore) {
           window.api.setIgnoreMouse(ignore)
@@ -426,7 +477,7 @@ export function App() {
     }
     window.addEventListener('mousemove', onMove)
     return () => window.removeEventListener('mousemove', onMove)
-  }, [clickThrough, pseudoFullscreen, controlBarAlwaysVisible])
+  }, [clickThrough, pseudoFullscreen, controlBarAlwaysVisible, commentListVisible])
 
   // 操作パネル常時表示の切替時に即反映
   useEffect(() => {
@@ -465,6 +516,9 @@ export function App() {
       setControlBarAlwaysVisible(s.controlBarAlwaysVisible)
       setMarkerLabelsAlwaysVisible(s.markerLabelsAlwaysVisible)
       setThinningPerSec(s.thinningPerSec)
+      setCommentListVisible(s.commentListVisible)
+      setNgUserIds(s.ngUserIds)
+      setNgWords(s.ngWords)
     })
   }, [])
 
@@ -505,7 +559,7 @@ export function App() {
   // ───────────────────────────────────────────────────────
   return (
     <div
-      className={`app ${pseudoFullscreen ? 'fullscreen' : ''}`}
+      className={`app ${pseudoFullscreen ? 'fullscreen' : ''} ${commentListVisible ? 'panel-open' : ''}`}
       style={{ background: backgroundCss(background) }}
       onContextMenu={onContextMenu}
       onDoubleClick={onDoubleClick}
@@ -542,6 +596,21 @@ export function App() {
           <p>ニコニコ動画コメントXMLを<br />ドラッグ &amp; ドロップ</p>
           <button onClick={openFile}>ファイルを選択</button>
         </div>
+      )}
+
+      {/* コメントリストパネル（右側 / SPEC §13将来構想の実装） */}
+      {commentListVisible && (
+        <CommentPanel
+          comments={comments}
+          userIds={userIds}
+          ngUserIds={ngUserIds}
+          ngWords={ngWords}
+          currentTime={currentTime}
+          onSeek={seekTo}
+          onToggleNgUser={toggleNgUser}
+          onToggleNgWord={toggleNgWord}
+          onClose={toggleCommentList}
+        />
       )}
 
       {/* コメント統計（コメントウィンドウ内・右下） */}
@@ -599,6 +668,8 @@ export function App() {
           controlBarAlwaysVisible={controlBarAlwaysVisible}
           markerLabelsAlwaysVisible={markerLabelsAlwaysVisible}
           thinningPerSec={thinningPerSec}
+          commentListVisible={commentListVisible}
+          ngCount={ngUserIds.length + ngWords.length}
           onOpenFile={openFile}
           onToggleFullscreen={toggleFullscreen}
           onPickFontScale={applyFontScale}
@@ -608,6 +679,8 @@ export function App() {
           onPickThinning={applyThinning}
           onToggleControlBar={toggleControlBar}
           onToggleMarkerLabels={toggleMarkerLabels}
+          onToggleCommentList={toggleCommentList}
+          onClearNg={clearNg}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
           onToggleClickThrough={toggleClickThrough}
           onShowAbout={() => setShowAbout(true)}

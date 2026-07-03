@@ -15,11 +15,17 @@ export interface FormattedComment {
   is_my_post: boolean
 }
 
-export function parseNicoXML(xmlText: string): FormattedComment[] {
+export interface ParsedXml {
+  comments: FormattedComment[]
+  /** comments と同じ順序の生 user_id 文字列（NG判定・匿名IDは文字列ハッシュのため別持ち） */
+  userIds: string[]
+}
+
+export function parseNicoXML(xmlText: string): ParsedXml {
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(xmlText, 'application/xml')
   const chats = xmlDoc.getElementsByTagName('chat')
-  const comments: FormattedComment[] = []
+  const entries: { comment: FormattedComment; userId: string }[] = []
 
   for (let i = 0; i < chats.length; i++) {
     const chat = chats[i]
@@ -30,26 +36,34 @@ export function parseNicoXML(xmlText: string): FormattedComment[] {
     const vpos = parseInt(chat.getAttribute('vpos') || '0', 10)
     const date = parseInt(chat.getAttribute('date') || '0', 10)
     const mail = (chat.getAttribute('mail') || '').split(/\s+/).filter(Boolean)
-    // user_id は匿名コメントだと文字列ハッシュのことがあるので、数値化できなければ 0
-    const user_id = parseInt(chat.getAttribute('user_id') || '0', 10) || 0
+    const rawUserId = chat.getAttribute('user_id') || ''
+    // niconicomments の formatted 型は user_id: number。匿名IDは数値化できないので 0 に落とす
+    const user_id = parseInt(rawUserId || '0', 10) || 0
     const premium = parseInt(chat.getAttribute('premium') || '0', 10) > 0
 
-    comments.push({
-      id: no,
-      vpos,
-      content,
-      date,
-      date_usec: 0,
-      owner: false,
-      premium,
-      mail,
-      user_id,
-      layer: -1,
-      is_my_post: false,
+    entries.push({
+      comment: {
+        id: no,
+        vpos,
+        content,
+        date,
+        date_usec: 0,
+        owner: false,
+        premium,
+        mail,
+        user_id,
+        layer: -1,
+        is_my_post: false,
+      },
+      userId: rawUserId,
     })
   }
 
-  return comments.sort((a, b) => a.vpos - b.vpos)
+  entries.sort((a, b) => a.comment.vpos - b.comment.vpos)
+  return {
+    comments: entries.map((e) => e.comment),
+    userIds: entries.map((e) => e.userId),
+  }
 }
 
 /**
