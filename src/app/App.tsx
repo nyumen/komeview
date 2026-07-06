@@ -8,7 +8,7 @@ import {
 import { Overlay, type OverlayHandle } from './Overlay'
 import { BottomBar } from './BottomBar'
 import { CommentPanel } from './CommentPanel'
-import { SpeedMenu, ContextMenu, AboutDialog } from './menus'
+import { SpeedMenu, ContextMenu, AboutDialog, KomenasneDialog } from './menus'
 import { parseNicoXML, thinComments, type FormattedComment } from './xml'
 import { computeDensity, type DensityResult } from './density'
 import { MARKER_LABELS, backgroundCss } from './constants'
@@ -74,6 +74,9 @@ export function App() {
   const [speedMenu, setSpeedMenu] = useState<{ x: number; y: number } | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
   const [showAbout, setShowAbout] = useState(false)
+  const [showKomenasne, setShowKomenasne] = useState(false)
+  const [komenasneFetching, setKomenasneFetching] = useState(false)
+  const [komenasneUrl, setKomenasneUrl] = useState('')
   const [appVersion, setAppVersion] = useState('')
 
   const overlayRef = useRef<OverlayHandle>(null)
@@ -353,6 +356,27 @@ export function App() {
     if (res) loadXmlText(res.name, res.content)
   }, [loadXmlText])
 
+  // komenasne サーバから再生中番組のコメントを取得（URLは永続化）
+  const fetchFromKomenasne = useCallback(
+    async (url: string) => {
+      setKomenasneFetching(true)
+      setKomenasneUrl(url)
+      window.api.saveSettings({ komenasneUrl: url })
+      try {
+        const res = await window.api.fetchKomenasne(url)
+        if (res.error) {
+          window.alert(res.error)
+          return
+        }
+        loadXmlText(res.filename!, res.xml!)
+        setShowKomenasne(false)
+      } finally {
+        setKomenasneFetching(false)
+      }
+    },
+    [loadXmlText]
+  )
+
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
@@ -519,6 +543,7 @@ export function App() {
       setCommentListVisible(s.commentListVisible)
       setNgUserIds(s.ngUserIds)
       setNgWords(s.ngWords)
+      setKomenasneUrl(s.komenasneUrl)
     })
   }, [])
 
@@ -666,6 +691,7 @@ export function App() {
           onClearNg={clearNg}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
           onToggleClickThrough={toggleClickThrough}
+          onShowKomenasne={() => setShowKomenasne(true)}
           onShowAbout={() => setShowAbout(true)}
           onCloseApp={() => window.api.close()}
           onClose={() => setCtxMenu(null)}
@@ -674,6 +700,15 @@ export function App() {
 
       {showAbout && (
         <AboutDialog version={appVersion} onClose={() => setShowAbout(false)} />
+      )}
+
+      {showKomenasne && (
+        <KomenasneDialog
+          initialUrl={komenasneUrl}
+          fetching={komenasneFetching}
+          onFetch={fetchFromKomenasne}
+          onClose={() => setShowKomenasne(false)}
+        />
       )}
     </div>
   )

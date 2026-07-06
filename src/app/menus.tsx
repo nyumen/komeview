@@ -83,6 +83,7 @@ interface ContextMenuProps {
   onClearNg: () => void
   onToggleAlwaysOnTop: () => void
   onToggleClickThrough: () => void
+  onShowKomenasne: () => void
   onShowAbout: () => void
   onCloseApp: () => void
   onClose: () => void
@@ -97,7 +98,7 @@ export function ContextMenu(props: ContextMenuProps) {
     onPickBigSeek, onPickBackground, onPickThinning, onToggleControlBar,
     onToggleMarkerLabels, onToggleCommentList, onClearNg,
     onToggleAlwaysOnTop, onToggleClickThrough,
-    onShowAbout, onCloseApp, onClose,
+    onShowKomenasne, onShowAbout, onCloseApp, onClose,
   } = props
 
   const run = (fn: () => void) => () => { fn(); onClose() }
@@ -121,6 +122,7 @@ export function ContextMenu(props: ContextMenuProps) {
     <div className="menu-backdrop" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose() }}>
       <div ref={menuRef} className="menu context-menu" style={{ left: pos.left, top: pos.top }} onClick={(e) => e.stopPropagation()}>
         <div className="menu-item" onClick={run(onOpenFile)}>XMLファイルを開く…</div>
+        <div className="menu-item" onClick={run(onShowKomenasne)}>komenasneから取得…</div>
         <div className="menu-sep" />
         <div className="menu-item" onClick={run(onToggleFullscreen)}>
           <span className="menu-check">{pseudoFullscreen ? '✓' : ''}</span>全画面
@@ -248,6 +250,62 @@ export function AboutDialog({ version, onClose }: AboutDialogProps) {
           <a href="#" onClick={ext('https://github.com/nyumen/komeview')}>GitHub</a>
         </div>
         <button className="about-close" onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  )
+}
+
+// ───────────────────────────────────────────────────────────
+// komenasne 取得ダイアログ（サーバURLを入力して再生中番組のコメントを取得）
+// ───────────────────────────────────────────────────────────
+interface KomenasneDialogProps {
+  initialUrl: string
+  fetching: boolean
+  onFetch: (url: string) => void
+  onClose: () => void
+}
+
+export function KomenasneDialog({ initialUrl, fetching, onFetch, onClose }: KomenasneDialogProps) {
+  const [url, setUrl] = useState(initialUrl)
+  return (
+    <div
+      className="menu-backdrop"
+      onClick={fetching ? undefined : onClose}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <div className="about komenasne-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="about-title">komenasneから取得</div>
+        <div className="about-desc">
+          komenasne を <code>--serve</code> で起動しているPCのURLを入力してください。
+          <br />
+          nasneで再生中の番組のコメントを取得します。
+        </div>
+        <input
+          className="komenasne-url"
+          type="text"
+          placeholder="http://192.168.0.12:8765"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && url.trim() && !fetching) onFetch(url.trim())
+            e.stopPropagation() // プレイヤーのショートカットに食われないように
+          }}
+          disabled={fetching}
+          autoFocus
+          spellCheck={false}
+        />
+        <div className="komenasne-actions">
+          <button className="about-close komenasne-cancel" onClick={onClose} disabled={fetching}>
+            キャンセル
+          </button>
+          <button
+            className="about-close"
+            onClick={() => onFetch(url.trim())}
+            disabled={!url.trim() || fetching}
+          >
+            {fetching ? '取得中…' : '取得'}
+          </button>
+        </div>
       </div>
     </div>
   )
