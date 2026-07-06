@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MARKERS,
-  findMarkers,
-  emptyMarkers,
+  findMarkerOccurrences,
   type MarkerKey,
+  type MarkerOccurrence,
 } from '../shared/markers'
 import { Overlay, type OverlayHandle } from './Overlay'
 import { BottomBar } from './BottomBar'
@@ -24,7 +24,7 @@ export function App() {
   const [userIds, setUserIds] = useState<string[]>([]) // comments と同順の生 user_id
   const [fileName, setFileName] = useState('')
   const [duration, setDuration] = useState(0)
-  const [markers, setMarkers] = useState<Record<MarkerKey, number | null>>(emptyMarkers())
+  const [markers, setMarkers] = useState<MarkerOccurrence[]>([])
   const [density, setDensity] = useState<DensityResult | null>(null)
 
   // ─── 再生状態 ───
@@ -84,7 +84,7 @@ export function App() {
   // キーボード等から参照する最新状態
   const stateRef = useRef({
     duration: 0,
-    markers: emptyMarkers() as Record<MarkerKey, number | null>,
+    markers: [] as MarkerOccurrence[],
     bigSeekSec: 5,
     pseudoFullscreen: false,
     hasComments: false,
@@ -170,12 +170,17 @@ export function App() {
     [getTime]
   )
 
+  // 種類指定ジャンプ（k/o/a/b/c/e）：現在位置より後ろの直近の同種マーカーへ。
+  // 後ろに無ければ先頭の出現へ戻る（キー連打で周回できる）
   const jumpMarker = useCallback(
     (key: MarkerKey) => {
-      const ms = stateRef.current.markers[key]
-      if (ms != null) seekTo(ms / 1000)
+      const list = stateRef.current.markers.filter((m) => m.key === key)
+      if (!list.length) return
+      const t = getTime()
+      const next = list.find((m) => m.vposMs / 1000 > t + 0.5) ?? list[0]
+      seekTo(next.vposMs / 1000)
     },
-    [seekTo]
+    [getTime, seekTo]
   )
 
   // ───────────────────────────────────────────────────────
@@ -219,17 +224,12 @@ export function App() {
   const seekBack = useCallback(() => scrubStep(-FINE_SEEK_SEC), [scrubStep])
   const seekForward = useCallback(() => scrubStep(FINE_SEEK_SEC), [scrubStep])
 
-  // 次のマーカー（現在位置より後の最初のマーカー）へジャンプ（SPEC §3.1 / "j" キー・ジャンプボタン共通）
+  // 次のマーカー（現在位置より後の最初の出現）へジャンプ（SPEC §3.1 / "j" キー・ジャンプボタン共通）
   const jumpToNextMarker = useCallback(() => {
     const t = getTime()
-    let best = Infinity
-    for (const m of MARKERS) {
-      const ms = stateRef.current.markers[m.key]
-      if (ms == null) continue
-      const sec = ms / 1000
-      if (sec > t + 0.05 && sec < best) best = sec
-    }
-    if (best !== Infinity) seekTo(best)
+    // markers は時系列ソート済み
+    const next = stateRef.current.markers.find((m) => m.vposMs / 1000 > t + 0.05)
+    if (next) seekTo(next.vposMs / 1000)
   }, [getTime, seekTo])
 
   // ───────────────────────────────────────────────────────
@@ -338,7 +338,7 @@ export function App() {
     setUserIds(parsedIds)
     setFileName(name)
     setDuration(dur)
-    setMarkers(findMarkers(parsed))
+    setMarkers(findMarkerOccurrences(parsed))
     setDensity(computeDensity(parsed.map((c) => c.vpos / 100), dur))
     // 読み込み完了と同時に先頭から自動再生する
     clock.current.playing = true
@@ -446,8 +446,8 @@ export function App() {
       // コメントリストパネル上ではリストのスクロールに任せる（シークしない）
       if ((e.target as HTMLElement | null)?.closest('.comment-panel')) return
       e.preventDefault()
-      // ホイール1ノッチ(deltaY≈100)で約1秒。上スクロール=進む / 下スクロール=戻る
-      scrubStep(-e.deltaY * 0.01)
+      // ホイール1ノッチ(deltaY≈100)で約1秒
+      scrubStep(e.deltaY * 0.01)
       // ホイールには終了イベントが無いので、イベントごとに即時（遅延0）で再開を予約する
       // （連続スクロール中の合間の再生は数十ms単位で体感されない）
       const s = scrubRef.current
@@ -540,20 +540,13 @@ export function App() {
     toggleFullscreen()
   }
 
-  // 次のジャンプ先（現在位置より後の最初のマーカー / SPEC §3.1）
-  let nextMarkerKey: MarkerKey | null = null
-  let nextMarkerTime = Infinity
-  for (const m of MARKERS) {
-    const ms = markers[m.key]
-    if (ms == null) continue
-    const t = ms / 1000
-    if (t > currentTime + 0.05 && t < nextMarkerTime) {
-      nextMarkerTime = t
-      nextMarkerKey = m.key
-    }
-  }
-  const nextMarker = nextMarkerKey
-    ? { label: MARKER_LABELS[nextMarkerKey], remainingSec: nextMarkerTime - currentTime }
+  // 次のジャンプ先（現在位置より後の最初の出現 / SPEC §3.1）
+  const nextOcc = markers.find((m) => m.vposMs / 1000 > currentTime + 0.05)
+  const nextMarker = nextOcc
+    ? {
+        label: MARKER_LABELS[nextOcc.key],
+        remainingSec: nextOcc.vposMs / 1000 - currentTime,
+      }
     : null
 
   // ───────────────────────────────────────────────────────
@@ -613,15 +606,6 @@ export function App() {
         />
       )}
 
-      {/* コメント統計（コメントウィンドウ内・右下） */}
-      {density && (
-        <div className={`stats-overlay ${barVisible ? 'visible' : ''}`}>
-          <span>total {density.total} コメ</span>
-          <span>max {Math.round(density.maxPerMin)} コメ/分</span>
-          <span>avg {Math.round(density.avgPerMin)} コメ/分</span>
-        </div>
-      )}
-
       <BottomBar
         visible={barVisible}
         duration={duration}
@@ -639,7 +623,6 @@ export function App() {
         onSeekEnd={scrubEnd}
         onJumpNext={jumpToNextMarker}
         onSeek={seekTo}
-        onJumpMarker={jumpMarker}
         onSpeedClick={(x, y) => setSpeedMenu({ x, y })}
       />
 

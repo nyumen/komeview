@@ -44,8 +44,10 @@ export const Overlay = forwardRef<OverlayHandle, Props>(
       []
     )
 
-    // 再構築（初期化）は同期処理でUIが固まるため、先に「再構築中…」を描画してから実行する
+    // 再構築（初期化）は同期処理でUIが固まるため、先に「再構築中…」を描画してから実行する。
+    // ただし初回のファイル読み込み時は出さない（設定切替による再構築時のみ表示 / ユーザー要望）
     const [rebuilding, setRebuilding] = useState(false)
+    const hadInstanceRef = useRef(false)
 
     useEffect(() => {
       const canvas = canvasRef.current
@@ -60,13 +62,16 @@ export const Overlay = forwardRef<OverlayHandle, Props>(
           ncRef.current.destroy()
           ncRef.current = null
         }
+        hadInstanceRef.current = false
         const ctx = canvas.getContext('2d')
         ctx?.clearRect(0, 0, canvas.width, canvas.height)
         return
       }
 
-      // 「再構築中…」の表示を先にペイントさせてから重い初期化を始める
-      setRebuilding(true)
+      // 既にコメントを表示していた状態からの再構築のときだけ「再構築中…」を出す
+      const isRebuild = hadInstanceRef.current
+      hadInstanceRef.current = true
+      if (isRebuild) setRebuilding(true)
       const id = setTimeout(() => {
         if (ncRef.current) {
           ncRef.current.clear()

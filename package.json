@@ -1,7 +1,7 @@
 {
   "name": "komeview",
   "productName": "komeview",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "動画の再生画面にニコニコのコメントを重ねて表示するデスクトップアプリ",
   "author": "kamm (https://github.com/nyumen)",
   "main": "dist/main.js",

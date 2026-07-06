@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { MarkerKey } from '../shared/markers'
+import type { MarkerOccurrence } from '../shared/markers'
 import type { DensityResult } from './density'
 import { SeekBar } from './SeekBar'
 import { formatTime, formatRate } from './format'
@@ -10,7 +10,7 @@ interface Props {
   currentTime: number
   isPlaying: boolean
   playbackRate: number
-  markers: Record<MarkerKey, number | null>
+  markers: MarkerOccurrence[]
   density: DensityResult | null
   markerLabelsAlwaysVisible: boolean
   /** 次のジャンプ先（無ければ null）SPEC §3.1 */
@@ -23,7 +23,6 @@ interface Props {
   onSeekEnd: () => void
   onJumpNext: () => void
   onSeek: (time: number) => void
-  onJumpMarker: (key: MarkerKey) => void
   onSpeedClick: (x: number, y: number) => void
 }
 
@@ -44,7 +43,6 @@ export function BottomBar({
   onSeekEnd,
   onJumpNext,
   onSeek,
-  onJumpMarker,
   onSpeedClick,
 }: Props) {
   // ≪ ≫ の押しっぱなしリピート（キーのオートリピート相当 / SPEC §3）
@@ -90,7 +88,6 @@ export function BottomBar({
         density={density}
         markerLabelsAlwaysVisible={markerLabelsAlwaysVisible}
         onSeek={onSeek}
-        onJumpMarker={onJumpMarker}
       />
 
       <div className="controls">
@@ -136,6 +133,17 @@ export function BottomBar({
             </span>
           )}
         </div>
+
+        {/* コメント統計（2行表示・3桁カンマ区切り） */}
+        {density && (
+          <div className="stats">
+            <span>total {density.total.toLocaleString('ja-JP')} コメ</span>
+            <span>
+              max {Math.round(density.maxPerMin).toLocaleString('ja-JP')} avg{' '}
+              {Math.round(density.avgPerMin).toLocaleString('ja-JP')} コメ/分
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )

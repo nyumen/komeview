@@ -230,17 +230,13 @@ body,
   max-width: 220px;
 }
 
-/* パネル表示中はコメント描画・下部バー・統計を左に寄せる */
+/* パネル表示中はコメント描画・下部バーを左に寄せる */
 .app.panel-open .overlay-canvas {
   width: calc(100% - var(--panel-w));
 }
 
 .app.panel-open .bottom-bar {
   right: var(--panel-w);
-}
-
-.app.panel-open .stats-overlay {
-  right: calc(var(--panel-w) + 16px);
 }
 
 /* ─── 再構築中の表示 ─── */
@@ -498,27 +494,16 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
-/* コメント統計（シークバーの少し上・右寄せ / 波形に重なってよい / 下部バーの表示に同期） */
-.stats-overlay {
-  position: absolute;
-  right: 16px;
-  bottom: 62px; /* シークトラックのすぐ上（波形エリア内） */
+/* コメント統計（操作パネルの右側・2行表示） */
+.stats {
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  font-size: 13px;
-  color: #cbd5e1;
-  line-height: 1.45;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
   white-space: nowrap;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  z-index: 31;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-
-.stats-overlay.visible {
-  opacity: 1;
 }
 
 /* ─── メニュー ─── */

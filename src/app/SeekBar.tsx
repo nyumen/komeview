@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { MARKERS, type MarkerKey } from '../shared/markers'
+import type { MarkerOccurrence } from '../shared/markers'
 import { MARKER_COLORS, MARKER_LABELS } from './constants'
 import type { DensityResult } from './density'
 import { formatTime } from './format'
@@ -7,12 +7,12 @@ import { formatTime } from './format'
 interface Props {
   duration: number
   currentTime: number
-  markers: Record<MarkerKey, number | null>
+  /** マーカーの出現一覧（同じ種類が複数回ありうる / 時系列順） */
+  markers: MarkerOccurrence[]
   density: DensityResult | null
   /** マーカーラベルを常時表示するか（false ならマウスオーバー時のみ） */
   markerLabelsAlwaysVisible: boolean
   onSeek: (time: number) => void
-  onJumpMarker: (key: MarkerKey) => void
 }
 
 export function SeekBar({
@@ -22,7 +22,6 @@ export function SeekBar({
   density,
   markerLabelsAlwaysVisible,
   onSeek,
-  onJumpMarker,
 }: Props) {
   const trackRef = useRef<HTMLDivElement | null>(null)
   const draggingRef = useRef(false)
@@ -96,26 +95,25 @@ export function SeekBar({
         <div className="seekbar-played" style={{ width: `${ratio * 100}%` }} />
         <div className="seekbar-playhead" style={{ left: `${ratio * 100}%` }} />
 
-        {/* マーカー点 */}
-        {MARKERS.map(({ key }) => {
-          const ms = markers[key]
-          if (ms == null || duration <= 0) return null
-          const left = Math.min(100, Math.max(0, (ms / 1000 / duration) * 100))
-          return (
-            <div
-              key={key}
-              className="seekbar-marker"
-              style={{ left: `${left}%`, background: MARKER_COLORS[key] }}
-              title={`${MARKER_LABELS[key]} へジャンプ`}
-              onPointerDown={(e) => {
-                e.stopPropagation()
-                onJumpMarker(key)
-              }}
-            >
-              <span className="seekbar-marker-label">{MARKER_LABELS[key]}</span>
-            </div>
-          )
-        })}
+        {/* マーカー点（同じ種類が複数回ありうる。クリックでその出現位置へシーク） */}
+        {duration > 0 &&
+          markers.map(({ key, vposMs }) => {
+            const left = Math.min(100, Math.max(0, (vposMs / 1000 / duration) * 100))
+            return (
+              <div
+                key={`${key}-${vposMs}`}
+                className="seekbar-marker"
+                style={{ left: `${left}%`, background: MARKER_COLORS[key] }}
+                title={`${MARKER_LABELS[key]} へジャンプ`}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  onSeek(vposMs / 1000)
+                }}
+              >
+                <span className="seekbar-marker-label">{MARKER_LABELS[key]}</span>
+              </div>
+            )
+          })}
       </div>
 
       {/* ホバー時刻ツールチップ（時刻のみ / SPEC §5） */}

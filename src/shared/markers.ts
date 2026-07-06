@@ -1,6 +1,7 @@
 // 元のブラウザ拡張 (src/constants/markers.ts, src/utils/api/jikkyo/findMarkers.ts)
-// のジャンプ機能を移植したもの。
-// 「該当コメントが 8 秒ウィンドウ内で最も密集する位置」へジャンプする。
+// のジャンプ機能を移植し、複数回検出に拡張したもの（SPEC §5）。
+// 「該当コメントが 8 秒ウィンドウ内で密集する位置」を種類ごとに複数箇所検出する
+// （30分+30分の2話連続放送や、特殊EDで終盤にOPが流れる編成などに対応）。
 
 export interface CommentLike {
   /** vpos は 1/100 秒単位（centiseconds）。formatted コメントの vpos と同じ。 */
@@ -8,66 +9,49 @@ export interface CommentLike {
   content: string
 }
 
-type Range =
-  | [start: number | null, end: number | null]
-  | ((durationMs: number) => [start: number | null, end: number | null])
-
 export const MARKERS = [
   {
     key: 'start',
     label: 'ｷﾀ━━━━(ﾟ∀ﾟ)━━━━!!',
     shortLabel: 'ｷﾀ-',
-    // Cmd/Ctrl+Shift+K
     shortcutKey: 'K',
     regexp:
       /^(ｷﾀ|キタ)[ｰー━].*[!！]$|^きたあ{0,}$|^(始|はじ)まっ?た|hjmt|ｈｊｍｔ$/i,
-    // ミリ秒。先頭〜5分のみ対象
-    range: [0, 300000] as Range,
   },
   {
     key: 'op',
     label: 'オープニング',
     shortLabel: 'OP',
-    // Cmd/Ctrl+Shift+O
     shortcutKey: 'O',
     regexp: /^出?(OP|ＯＰ)$/i,
-    range: ((durationMs) => [null, durationMs / 2]) as Range,
   },
   {
     key: 'aPart',
     label: 'Aパート',
     shortLabel: 'A',
-    // Cmd/Ctrl+Shift+A
     shortcutKey: 'A',
     regexp: /^(A|Ａ)$/,
-    range: [null, null] as Range,
   },
   {
     key: 'bPart',
     label: 'Bパート',
     shortLabel: 'B',
-    // Cmd/Ctrl+Shift+B
     shortcutKey: 'B',
     regexp: /^(B|Ｂ)$/,
-    range: [null, null] as Range,
   },
   {
     key: 'ed',
     label: 'エンディング',
     shortLabel: 'ED',
-    // Cmd/Ctrl+Shift+E
     shortcutKey: 'E',
     regexp: /^(ED|ＥＤ)$/i,
-    range: ((durationMs) => [durationMs / 2, null]) as Range,
   },
   {
     key: 'cPart',
     label: 'Cパート',
     shortLabel: 'C',
-    // Cmd/Ctrl+Shift+C
     shortcutKey: 'C',
     regexp: /^(C|Ｃ)$/,
-    range: [null, null] as Range,
   },
 ] as const satisfies {
   key: string
@@ -75,85 +59,90 @@ export const MARKERS = [
   shortLabel: string
   shortcutKey: string
   regexp: RegExp
-  range: Range
 }[]
 
 export type MarkerKey = (typeof MARKERS)[number]['key']
 
-/** 全マーカーを null で初期化した Record を返す */
-export function emptyMarkers(): Record<MarkerKey, number | null> {
-  const result = {} as Record<MarkerKey, number | null>
-  for (const m of MARKERS) result[m.key] = null
-  return result
+/** マーカーの1出現。同じ key が複数回現れうる */
+export interface MarkerOccurrence {
+  key: MarkerKey
+  /** ジャンプ先時刻（ミリ秒） */
+  vposMs: number
 }
 
-/**
- * 各マーカーのジャンプ先時刻（ミリ秒）を算出する。見つからなければ null。
- * 元の findMarkers と同じく、マーカーは時系列順に連鎖する（後のマーカーは前のマーカーより後ろ）。
- */
-export function findMarkers(
-  comments: CommentLike[]
-): Record<MarkerKey, number | null> {
-  const result = emptyMarkers()
+/** 「密集」とみなすウィンドウ幅（元実装と同じ8秒） */
+const CLUSTER_WINDOW_MS = 8000
+/** 同じ種類のマーカー同士はこれ以上離れていないと別の出現とみなさない（近接統合） */
+const MIN_SEPARATION_MS = 5 * 60 * 1000
 
+/**
+ * 各マーカーの出現位置（複数可）を時系列順に返す。
+ *
+ * アルゴリズム:
+ * 1. 種類ごとに該当コメントを集め、8秒ウィンドウのクラスタを列挙
+ * 2. コメント数の多いクラスタから順に採用し、採用済みと5分未満の近接クラスタは統合（棄却）
+ * 3. 誤検出抑制: 最良クラスタは無条件で採用（従来の感度を維持）、
+ *    2箇所目以降は「コメント2件以上 かつ 最良の20%以上」を要求
+ */
+export function findMarkerOccurrences(
+  comments: CommentLike[]
+): MarkerOccurrence[] {
   const sorted = comments
     .map((c) => ({ vposMs: c.vpos * 10, body: c.content }))
     .sort((a, b) => a.vposMs - b.vposMs)
 
-  if (!sorted.length) {
-    return result
-  }
+  if (!sorted.length) return []
 
-  const lastCmt = sorted.at(-1)!
-  let prevVposMs = 0
+  const result: MarkerOccurrence[] = []
 
-  for (const { key, regexp, range } of MARKERS) {
-    let rangeStart: number
-    let rangeEnd: number
+  for (const { key, regexp } of MARKERS) {
+    const matched = sorted.filter(({ body }) => regexp.test(body))
+    if (!matched.length) continue
 
-    if (typeof range === 'function') {
-      // 元実装と同じく、最後のコメントの vposMs を「長さ」として渡す
-      const [start, end] = range(lastCmt.vposMs)
-      rangeStart = start ?? -Infinity
-      rangeEnd = end ?? Infinity
-    } else {
-      rangeStart = range[0] ?? -Infinity
-      rangeEnd = range[1] ?? Infinity
+    // 8秒ウィンドウのクラスタを列挙（開始点を各該当コメントに置く）
+    interface Cluster {
+      vposMs: number
+      count: number
     }
-
-    const minVposMs = Math.max(prevVposMs, rangeStart, 0)
-    const maxVposMs = Math.min(lastCmt.vposMs, rangeEnd)
-
-    const filtered = sorted.filter(({ vposMs, body }) => {
-      return minVposMs <= vposMs && vposMs <= maxVposMs && regexp.test(body)
-    })
-
-    let tmpCount = 0
-    let tmpVposMs = 0
-
-    for (let i = 0; i < filtered.length; i++) {
-      const { vposMs } = filtered[i]
-
-      // i 番目以降で、8 秒以内に収まる該当コメントの塊
-      const cluster = filtered.slice(i).filter((v) => v.vposMs - vposMs <= 8000)
-
-      if (tmpCount < cluster.length) {
-        const first = cluster[0]
-        const last = cluster.at(-1)!
-        const adjustOffset = Math.trunc((last.vposMs - first.vposMs) / 10)
-
-        tmpCount = cluster.length
-        tmpVposMs = first.vposMs + adjustOffset
+    const clusters: Cluster[] = []
+    for (let i = 0; i < matched.length; i++) {
+      const first = matched[i]
+      let j = i
+      while (
+        j + 1 < matched.length &&
+        matched[j + 1].vposMs - first.vposMs <= CLUSTER_WINDOW_MS
+      ) {
+        j++
       }
+      const last = matched[j]
+      // 元実装と同じ位置補正（クラスタ先頭からわずかに後ろへ）
+      const adjustOffset = Math.trunc((last.vposMs - first.vposMs) / 10)
+      clusters.push({ vposMs: first.vposMs + adjustOffset, count: j - i + 1 })
     }
 
-    if (tmpCount) {
-      prevVposMs = tmpVposMs
-      result[key] = tmpVposMs
-    } else {
-      result[key] = null
+    // コメント数の多い順に採用し、採用済みの5分以内は統合（棄却）
+    const accepted: Cluster[] = []
+    const byCount = [...clusters].sort(
+      (a, b) => b.count - a.count || a.vposMs - b.vposMs
+    )
+    for (const c of byCount) {
+      if (accepted.some((a) => Math.abs(a.vposMs - c.vposMs) < MIN_SEPARATION_MS)) {
+        continue
+      }
+      accepted.push(c)
+    }
+    if (!accepted.length) continue
+
+    // 誤検出抑制: 2箇所目以降は最低件数と相対件数を要求
+    const bestCount = accepted[0].count
+    const kept = accepted.filter(
+      (c, idx) => idx === 0 || (c.count >= 2 && c.count >= bestCount * 0.2)
+    )
+
+    for (const c of kept) {
+      result.push({ key, vposMs: c.vposMs })
     }
   }
 
-  return result
+  return result.sort((a, b) => a.vposMs - b.vposMs)
 }
