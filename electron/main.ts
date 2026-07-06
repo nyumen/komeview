@@ -192,6 +192,28 @@ ipcMain.on('app:openExternal', (_e, url: string) => {
   shell.openExternal(url)
 })
 
+// komenasne サーバ（--serve）の /api/play から再生中番組のコメントを取得する。
+// レンダラーから直接 fetch すると CORS で弾かれるためメインプロセスで行う。
+ipcMain.handle('komenasne:fetch', async (_e, baseUrl: string) => {
+  try {
+    let base = baseUrl.trim()
+    if (!/^https?:\/\//i.test(base)) base = `http://${base}`
+    base = base.replace(/\/+$/, '')
+    const res = await fetch(`${base}/api/play`, {
+      // 過去ログAPIが遅い場合があるため長めに待つ
+      signal: AbortSignal.timeout(90_000),
+    })
+    if (!res.ok) return { error: `サーバエラー: HTTP ${res.status}` }
+    const data = (await res.json()) as { error?: string; title?: string; filename?: string; xml?: string }
+    if (data.error) return { error: data.error }
+    if (!data.xml || !data.filename) return { error: 'サーバの応答が不正です。' }
+    return { title: data.title, filename: data.filename, xml: data.xml }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { error: `komenasneサーバに接続できませんでした（${msg}）` }
+  }
+})
+
 ipcMain.on('window:minimize', () => win?.minimize())
 ipcMain.on('window:close', () => win?.close())
 ipcMain.on('window:setAlwaysOnTop', (_e, on: boolean) => applyAlwaysOnTop(on))

@@ -46,6 +46,7 @@
 
 - ウィンドウに XML ファイルを**ドラッグ＆ドロップ**
 - 右クリックメニュー →「XMLファイルを開く…」
+- 右クリックメニュー →「**komenasneから取得…**」— [komenasne](https://github.com/nyumen/komenasne) を `--serve` で起動しているPCのURLを指定すると、nasneで再生中の番組のコメントを直接取得できます（URLは記憶されます）
 - **アプリアイコンに XML をドロップ**して起動
   - Windows: デスクトップの komeview ショートカットに XML をドラッグ
   - macOS: `komeview.app` / Dock アイコンに XML をドロップ
@@ -97,6 +98,7 @@
 ### 右クリックメニュー
 
 - XMLファイルを開く
+- komenasneから取得
 - 全画面（擬似全画面）の ON/OFF
 - コメントリストの表示/非表示
 - フォントサイズ（100%〜50%）

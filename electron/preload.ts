@@ -25,6 +25,12 @@ const api = {
   openFile: (): Promise<{ name: string; content: string } | null> =>
     ipcRenderer.invoke('dialog:openFile'),
 
+  // komenasne サーバから再生中番組のコメントを取得
+  fetchKomenasne: (
+    baseUrl: string
+  ): Promise<{ error?: string; title?: string; filename?: string; xml?: string }> =>
+    ipcRenderer.invoke('komenasne:fetch', baseUrl),
+
   // アイコンへのドロップ / 関連付け起動で開かれた XML を受け取る（SPEC §11）
   onOpenFile: (cb: (file: { name: string; content: string }) => void): (() => void) => {
     const listener = (_e: unknown, file: { name: string; content: string }) => cb(file)

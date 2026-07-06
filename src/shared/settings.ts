@@ -37,6 +37,8 @@ export interface Settings {
   ngUserIds: string[]
   /** NGコメント（本文の完全一致）。該当コメントは描画・リストから除外 */
   ngWords: string[]
+  /** komenasne サーバのURL（例: http://192.168.0.12:8765） */
+  komenasneUrl: string
   /** 通常時のウィンドウ位置/サイズ（擬似全画面の復元先） */
   windowBounds: WindowBounds | null
 }
@@ -56,5 +58,6 @@ export const DEFAULT_SETTINGS: Settings = {
   commentListVisible: false,
   ngUserIds: [],
   ngWords: [],
+  komenasneUrl: '',
   windowBounds: null,
 }
